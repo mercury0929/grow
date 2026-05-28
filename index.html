@@ -141,7 +141,7 @@ header .tagline {
   color: var(--text-muted);
   margin-bottom: var(--s1);
 }
-input, select, textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   width: 100%;
   min-height: 44px;
   padding: var(--s2) var(--s3);
@@ -388,6 +388,9 @@ button.block { width: 100%; }
   min-height: 0;
   flex: 0 0 auto;
   accent-color: var(--primary);
+  -webkit-appearance: auto;
+  appearance: auto;
+  border-radius: 0;
 }
 
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
@@ -1063,8 +1066,7 @@ button.plain.block {
       <div class="field">
         <label>種目</label>
         <div class="row" style="margin-bottom:8px">
-          <input type="text" id="rec-exercise" list="rec-exercise-list" placeholder="選択または入力で検索" autocomplete="off">
-          <datalist id="rec-exercise-list"></datalist>
+          <select id="rec-exercise"><option value="">種目を選択...</option></select>
           <button class="secondary small" style="flex:0 0 auto" onclick="showAddExercise()">＋追加</button>
         </div>
         <div id="prev-record" class="previous" style="display:none"></div>
@@ -1690,19 +1692,21 @@ function confirmAddExercise(category) {
 
 function populateExerciseSelect() {
   const category = document.getElementById("rec-category").value;
-  const input = document.getElementById("rec-exercise");
-  const list = document.getElementById("rec-exercise-list");
-  const current = input.value;
-  list.innerHTML = "";
+  const sel = document.getElementById("rec-exercise");
+  const current = sel.value;
+  sel.innerHTML = '<option value="">種目を選択...</option>';
   const exercises = getExercisesForCategory(category);
   exercises.forEach(e => {
     const opt = document.createElement("option");
     opt.value = e.name;
-    list.appendChild(opt);
+    opt.textContent = e.name + (e.isTime ? " (時間)" : "");
+    sel.appendChild(opt);
   });
-  // Clear input if current value doesn't belong to this category
-  if (current && !exercises.some(e => e.name === current)) {
-    input.value = "";
+  // Keep current selection if it still belongs to this category
+  if (current && exercises.some(e => e.name === current)) {
+    sel.value = current;
+  } else {
+    sel.value = "";
   }
   updateRecordFormForExercise();
 }
