@@ -29,7 +29,7 @@
 `index.html` をブラウザで開くだけ。インターネット接続はグラフ描画ライブラリ (CDN) の読み込みにのみ必要です。
 
 ### Web公開版 (GitHub Pages)
-<!-- 公開後にURLをここに記載: https://ユーザー名.github.io/grow/ -->
+👉 **https://mercury0929.github.io/grow/**
 
 スマートフォンでアクセスし「ホーム画面に追加」すると、ネイティブアプリのように使えます (PWA対応)。
 
