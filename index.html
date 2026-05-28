@@ -1,0 +1,3971 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="GROW">
+<link rel="manifest" href='data:application/manifest+json,{"name":"GROW","short_name":"GROW","start_url":".","display":"standalone","background_color":"%23f2f2f7","theme_color":"%23007aff","icons":[]}'>
+<title>GROW — 筋トレの成長を見える化</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+:root {
+  /* Spacing — 8pt grid (HIG) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+
+  /* Typography — iOS HIG */
+  --t-c2: 11px;   /* Caption 2 */
+  --t-c1: 12px;   /* Caption 1 */
+  --t-fn: 13px;   /* Footnote */
+  --t-sh: 15px;   /* Subheadline */
+  --t-cal: 16px;  /* Callout */
+  --t-bd: 17px;   /* Body / Headline */
+  --t-t3: 20px;   /* Title 3 */
+  --t-t2: 22px;   /* Title 2 */
+  --t-t1: 28px;   /* Title 1 */
+  --t-lg: 34px;   /* Large Title */
+
+  /* iOS System Colors — Light */
+  --bg: #f2f2f7;             /* systemGroupedBackground */
+  --surface: #ffffff;        /* secondarySystemGroupedBackground */
+  --surface-2: #f2f2f7;      /* tertiarySystemGroupedBackground (inside cards) */
+  --text: #000000;           /* label */
+  --text-muted: rgba(60, 60, 67, 0.6);   /* secondaryLabel */
+  --text-tertiary: rgba(60, 60, 67, 0.3);
+  --border: rgba(60, 60, 67, 0.18);
+  --separator: rgba(60, 60, 67, 0.29);
+  --primary: #007aff;        /* systemBlue */
+  --primary-rgb: 0, 122, 255;
+  --primary-soft: rgba(0, 122, 255, 0.15);
+  --success: #34c759;        /* systemGreen */
+  --warning: #ff9500;        /* systemOrange */
+  --danger: #ff3b30;         /* systemRed */
+  --shadow: 0 0 0 0 transparent;
+  --radius: 10px;
+  --tabbar-bg: rgba(255, 255, 255, 0.78);
+}
+[data-theme="dark"] {
+  --bg: #000000;             /* systemGroupedBackground (dark) */
+  --surface: #1c1c1e;        /* secondary */
+  --surface-2: #2c2c2e;      /* tertiary */
+  --text: #ffffff;
+  --text-muted: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  --border: rgba(84, 84, 88, 0.4);
+  --separator: rgba(84, 84, 88, 0.65);
+  --primary: #0a84ff;
+  --primary-rgb: 10, 132, 255;
+  --primary-soft: rgba(10, 132, 255, 0.25);
+  --success: #30d158;
+  --warning: #ff9f0a;
+  --danger: #ff453a;
+  --tabbar-bg: rgba(28, 28, 30, 0.78);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { overflow-x: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif;
+  font-size: var(--t-bd);
+  line-height: 1.45;
+  padding-bottom: 96px;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+.app { max-width: 480px; margin: 0 auto; padding: 0 var(--s4); }
+
+/* Large Title (HIG) — left-aligned, bold, generous breathing room */
+header {
+  padding: var(--s5) 0 var(--s5);
+  text-align: left;
+}
+header .brand {
+  font-size: var(--t-lg);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--primary), #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+header .tagline {
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  margin-top: var(--s1);
+  letter-spacing: 0;
+}
+
+/* Inset Grouped Cards (HIG) — no borders, no shadow, sit on grouped background */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: var(--s4);
+  margin-bottom: var(--s3);
+}
+.card h2 {
+  font-size: var(--t-bd);
+  font-weight: 600;
+  margin-bottom: var(--s3);
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.card h3 {
+  font-size: var(--t-fn);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--s2);
+}
+
+.field { margin-bottom: var(--s3); }
+.field label {
+  display: block;
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  margin-bottom: var(--s1);
+}
+input, select, textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--s2) var(--s3);
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: var(--t-bd);
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+select {
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%), linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Keyboard-only focus visibility (mouse clicks don't show outline) */
+button:focus { outline: none; }
+button:focus-visible,
+a:focus-visible,
+.checkbox-row:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+textarea { min-height: 88px; resize: vertical; padding: var(--s3); }
+
+.row { display: flex; gap: var(--s2); }
+.row > * { flex: 1; min-width: 0; }
+
+/* HIG Buttons — filled primary, tinted, plain, destructive — all 44pt min */
+button {
+  min-height: 44px;
+  padding: 10px var(--s4);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: var(--t-bd);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: -0.01em;
+}
+button:active { opacity: 0.6; }
+button.secondary {
+  background: var(--surface-2);
+  color: var(--text);
+}
+button.tinted {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+button.ghost {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+button.plain {
+  background: transparent;
+  color: var(--primary);
+  font-weight: 400;
+  padding: var(--s2) var(--s3);
+}
+button.danger, button.destructive { background: var(--danger); }
+button.small {
+  min-height: 34px;
+  padding: 6px var(--s3);
+  font-size: var(--t-sh);
+  font-weight: 500;
+}
+button.block { width: 100%; }
+
+/* iOS Tab Bar — translucent with backdrop blur */
+.tabs {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--tabbar-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid var(--separator);
+  display: flex;
+  padding: var(--s1) 0 calc(var(--s1) + env(safe-area-inset-bottom));
+  z-index: 50;
+}
+.tabs button {
+  flex: 1;
+  background: transparent;
+  color: var(--text-muted);
+  min-height: 50px;
+  padding: var(--s1);
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  letter-spacing: 0.02em;
+}
+.tabs button .icon { font-size: 24px; line-height: 1; }
+.tabs button.active { color: var(--primary); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.previous {
+  font-size: var(--t-sh);
+  color: var(--text);
+  padding: var(--s3);
+  background: var(--primary-soft);
+  border-radius: var(--radius);
+  margin-bottom: var(--s3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s2);
+}
+.previous .copy-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: var(--t-c1);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 0;
+}
+
+.record-item {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s2);
+}
+.record-item .meta {
+  font-size: var(--t-c1);
+  color: var(--text-muted);
+  margin-bottom: var(--s1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s2);
+}
+.record-item .meta-actions { display: flex; gap: var(--s1); }
+.record-item .exercise {
+  font-size: var(--t-bd);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.record-item .detail { font-size: var(--t-sh); color: var(--text); margin-top: 2px; }
+.record-item .memo {
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  margin-top: var(--s2);
+  padding-left: var(--s2);
+  border-left: 2px solid var(--separator);
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--t-c2);
+  font-weight: 500;
+  background: var(--surface-2);
+  color: var(--text-muted);
+}
+.best-badge { background: linear-gradient(135deg, #ffd54f, #ffb300); color: #5a4500; font-weight: 600; }
+
+/* Modal — iOS sheet style with backdrop blur */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--s4);
+  z-index: 100;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.modal {
+  background: var(--surface);
+  border-radius: 14px;
+  padding: var(--s5);
+  max-width: 420px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h2 {
+  margin-bottom: var(--s3);
+  font-size: var(--t-t3);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pr-celebration {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  z-index: 200;
+}
+.pr-celebration .box {
+  background: linear-gradient(135deg, #ffd54f, #ff8a00);
+  padding: 22px 30px;
+  border-radius: 18px;
+  color: white;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.35);
+  animation: pop 1.8s ease;
+  max-width: 80%;
+}
+@keyframes pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  15% { transform: scale(1.1); opacity: 1; }
+  30% { transform: scale(1); }
+  80% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  cursor: pointer;
+  min-height: 44px;
+}
+.checkbox-row input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.stat-box {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: var(--s3);
+}
+.stat-box .label { font-size: var(--t-c1); color: var(--text-muted); }
+.stat-box .value {
+  font-size: var(--t-t3);
+  font-weight: 600;
+  margin-top: 2px;
+  letter-spacing: -0.01em;
+}
+
+canvas { max-width: 100%; }
+.chart-box { background: transparent; padding: 0; margin-top: var(--s2); }
+
+.exercise-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  margin: 3px 3px 3px 0;
+  font-size: var(--t-sh);
+  min-height: 32px;
+}
+.exercise-pill .ren, .exercise-pill .del {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: var(--s1);
+  padding: 4px 6px;
+  font-size: var(--t-fn);
+  border-radius: 4px;
+  min-width: 24px;
+  min-height: 24px;
+  line-height: 1;
+}
+.exercise-pill .ren { color: var(--text-muted); }
+.exercise-pill .del { color: var(--danger); }
+.exercise-pill .ren:active, .exercise-pill .del:active { background: var(--surface-2); }
+
+.muted { color: var(--text-muted); font-size: var(--t-fn); }
+.center { text-align: center; }
+.section-title {
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: var(--s5) var(--s2) var(--s2);
+  font-weight: 400;
+}
+.empty {
+  text-align: center;
+  padding: var(--s5) var(--s3);
+  color: var(--text-muted);
+  font-size: var(--t-sh);
+}
+.empty .sample-cta { margin-top: var(--s3); }
+.sample-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warning);
+  color: white;
+  font-size: var(--t-c2);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.report-header { text-align: center; margin-bottom: var(--s4); }
+.report-header h1 {
+  font-size: var(--t-t2);
+  font-weight: 700;
+  margin-bottom: var(--s1);
+  letter-spacing: -0.01em;
+}
+.report-header .date-range { font-size: var(--t-fn); color: var(--text-muted); }
+.report-header .app-mark {
+  font-size: var(--t-c2);
+  color: var(--text-muted);
+  margin-top: var(--s2);
+  letter-spacing: 0.1em;
+}
+
+/* Heatmap */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-flow: column;
+  gap: 3px;
+  width: 100%;
+  margin-top: 6px;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--surface-2);
+}
+.heatmap-cell.future { visibility: hidden; }
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  font-size: var(--t-c2);
+  color: var(--text-muted);
+  justify-content: flex-end;
+  margin-top: var(--s2);
+}
+.heatmap-legend .cell { width: 10px; height: 10px; border-radius: 2px; background: var(--surface-2); }
+
+/* Balance diagnosis */
+.balance-row { margin-bottom: var(--s4); }
+.balance-row:last-child { margin-bottom: 0; }
+.balance-row .balance-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--t-sh);
+  margin-bottom: var(--s1);
+}
+.balance-row .balance-head .ratio {
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.balance-row .balance-verdict {
+  font-size: var(--t-c1);
+  margin-top: var(--s1);
+}
+.balance-row .balance-verdict.ok { color: var(--success); }
+.balance-row .balance-verdict.warn { color: var(--warning); }
+
+/* Growth ranking */
+.growth-section h3 {
+  font-size: var(--t-fn);
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-bottom: var(--s2);
+}
+.growth-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 0.5px solid var(--separator);
+  font-size: var(--t-sh);
+}
+.growth-row:last-child { border-bottom: none; }
+.growth-row .medal { font-size: 18px; width: 24px; text-align: center; }
+.growth-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.growth-row .pct {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--t-sh);
+}
+
+/* Stacked bar */
+.stacked-bar {
+  display: flex;
+  height: 24px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: var(--s2) 0;
+  background: var(--surface-2);
+}
+.stacked-bar > div {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-c2);
+  color: white;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s3);
+  font-size: var(--t-c1);
+  color: var(--text-muted);
+  margin-top: var(--s2);
+}
+.legend .item { display: flex; align-items: center; gap: var(--s1); }
+.legend .swatch { width: 10px; height: 10px; border-radius: 2px; }
+
+/* Progress bar */
+.progress-bar {
+  height: 10px;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: var(--s2) 0;
+}
+.progress-bar .fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+.progress-bar.complete .fill { background: var(--success); }
+
+/* Timer FAB — iOS-style elevated circle */
+.timer-fab {
+  position: fixed;
+  right: var(--s4);
+  bottom: calc(82px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+  z-index: 60;
+  cursor: pointer;
+  border: none;
+  font-weight: 700;
+  min-height: 0;
+  padding: 0;
+}
+.timer-fab.active { background: var(--warning); animation: pulse 1.5s infinite; }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.2); }
+  50% { box-shadow: 0 6px 20px rgba(0,0,0,0.2), 0 0 0 8px rgba(255,149,0,0.18); }
+}
+.timer-fab .countdown { font-size: var(--t-sh); font-weight: 700; }
+
+/* PNG capture */
+.capturing .no-capture { display: none !important; }
+
+.help-text { font-size: var(--t-c1); color: var(--text-muted); margin-top: var(--s1); }
+
+.sample-notice {
+  background: rgba(255, 149, 0, 0.12);
+  border-radius: var(--radius);
+  padding: var(--s2) var(--s3);
+  margin-bottom: var(--s3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--t-sh);
+  gap: var(--s2);
+}
+.sample-notice .left { display: flex; align-items: center; gap: var(--s2); }
+.sample-notice button {
+  padding: 6px 14px;
+  font-size: var(--t-c1);
+  background: var(--warning);
+  color: white;
+  border-radius: 999px;
+  min-height: 32px;
+  font-weight: 600;
+}
+
+/* Inline edit/delete buttons — text-based for clarity (iOS Mail/Photos pattern) */
+.icon-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 5px 10px;
+  font-size: var(--t-fn);
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  line-height: 1;
+  font-family: inherit;
+}
+.icon-btn.danger {
+  background: transparent; /* override base button.danger filled red */
+  color: var(--danger);
+  font-weight: 600;
+}
+.icon-btn:active,
+.icon-btn.danger:active { background: var(--surface-2); }
+
+/* Jump chips — iOS-style segmented scroller */
+.jump-chips {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  padding: var(--s2) var(--s4) var(--s3);
+  margin: 0 calc(-1 * var(--s4)) var(--s1);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.jump-chips::-webkit-scrollbar { display: none; }
+.jump-chips button {
+  flex: 0 0 auto;
+  background: var(--surface);
+  color: var(--text);
+  border: none;
+  padding: 8px 14px;
+  font-size: var(--t-fn);
+  border-radius: 999px;
+  white-space: nowrap;
+  font-weight: 500;
+  min-height: 36px;
+}
+.jump-chips button:active { background: var(--primary); color: white; }
+.jump-chips button.active { background: var(--primary); color: white; }
+
+/* Per-set input rows */
+.set-rows { display: flex; flex-direction: column; gap: 6px; }
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+}
+.set-row .set-num {
+  width: 24px;
+  font-size: var(--t-c1);
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.set-row input {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  min-height: 40px;
+  padding: 8px 10px;
+}
+.set-row .set-x {
+  color: var(--text-muted);
+  font-size: var(--t-sh);
+  flex: 0 0 auto;
+}
+.set-row .set-rm {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: none;
+  border-radius: 999px;
+  font-size: 18px;
+  line-height: 1;
+  flex: 0 0 auto;
+  font-weight: 500;
+}
+.set-row .plate-btn {
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  flex: 0 0 auto;
+}
+.add-set-btn {
+  background: transparent;
+  color: var(--primary);
+  border: 1px dashed var(--border);
+  width: 100%;
+  margin-top: var(--s2);
+  font-weight: 500;
+  min-height: 40px;
+}
+
+/* Backup reminder banner */
+.backup-reminder {
+  background: rgba(255, 149, 0, 0.12);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: var(--t-sh);
+  color: var(--text);
+  border-left: 3px solid var(--warning);
+}
+
+/* Previous-record callouts (memo, goal) */
+.prev-memo {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border-radius: 6px;
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  font-style: italic;
+}
+.prev-goal {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border-radius: 6px;
+}
+.goal-tag {
+  display: inline-block;
+  font-size: var(--t-c2);
+  color: var(--primary);
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+/* Streak banner */
+.streak-banner {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: var(--s3) var(--s4);
+  margin-bottom: var(--s3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+}
+.streak-banner .left { display: flex; align-items: center; gap: var(--s3); flex: 1; min-width: 0; }
+.streak-banner .flame {
+  font-size: 28px;
+  line-height: 1;
+}
+.streak-banner .count {
+  font-size: var(--t-t2);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1;
+}
+.streak-banner .count .num {
+  font-size: var(--t-t1);
+  background: linear-gradient(135deg, #ff8a00, #ff3b30);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.streak-banner .label {
+  font-size: var(--t-c1);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.streak-banner .week {
+  text-align: right;
+  font-size: var(--t-c1);
+  color: var(--text-muted);
+}
+.streak-banner .week .big {
+  display: block;
+  font-size: var(--t-bd);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin: var(--s2) 0 var(--s3);
+}
+.filter-bar select {
+  flex: 1;
+  min-width: 140px;
+  min-height: 36px;
+  padding: 6px 28px 6px var(--s3);
+  font-size: var(--t-sh);
+}
+.filter-bar .chip {
+  flex: 0 0 auto;
+  background: var(--surface-2);
+  color: var(--text);
+  border: none;
+  padding: 6px 12px;
+  font-size: var(--t-sh);
+  border-radius: 999px;
+  min-height: 36px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.filter-bar .chip.active {
+  background: var(--primary);
+  color: white;
+}
+.filter-bar .clear {
+  background: transparent;
+  color: var(--primary);
+  border: none;
+  padding: 6px 8px;
+  font-size: var(--t-sh);
+  font-weight: 500;
+  min-height: 36px;
+}
+
+/* ===== Selection mode (iOS Mail / Photos pattern) ===== */
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: var(--s5) var(--s2) var(--s2);
+  gap: var(--s2);
+  min-height: 36px;
+}
+.section-header-row .title {
+  font-size: var(--t-fn);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+}
+.section-header-row .title.active {
+  color: var(--primary);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: var(--t-sh);
+}
+.section-header-row .actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.section-header-row button.plain {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: var(--t-sh);
+  font-weight: 400;
+}
+.section-header-row button.plain.strong { font-weight: 600; }
+.section-header-row button.plain.del { color: var(--danger); font-weight: 600; }
+
+.weight-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--s2);
+  gap: var(--s2);
+  min-height: 36px;
+}
+.weight-list-header h3 { margin: 0; }
+.weight-list-header .actions {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.weight-list-header button.plain {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: var(--t-sh);
+  font-weight: 400;
+}
+.weight-list-header button.plain.strong { font-weight: 600; }
+.weight-list-header button.plain.del { color: var(--danger); font-weight: 600; }
+
+/* Selection circle indicator */
+.select-circle {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all 0.15s ease;
+}
+.select-circle.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+.select-circle.selected::after {
+  content: "✓";
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Record item in selection mode */
+.record-item.in-selection {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s3);
+  cursor: pointer;
+  padding: var(--s3) var(--s4);
+  transition: background 0.15s ease;
+}
+.record-item.in-selection .content { flex: 1; min-width: 0; }
+.record-item.in-selection .meta {
+  display: block;
+  margin-bottom: var(--s1);
+}
+.record-item.in-selection.selected { background: var(--primary-soft); }
+
+button.plain.block {
+  text-align: center;
+  margin-top: var(--s2);
+  font-weight: 500;
+}
+
+/* Undo toast — iOS style */
+.toast {
+  position: fixed;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(28, 28, 30, 0.95);
+  color: #fff;
+  padding: 10px 8px 10px 18px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  z-index: 90;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  font-size: var(--t-sh);
+  animation: toastIn 0.2s ease-out;
+  max-width: 92%;
+}
+.toast button {
+  background: transparent;
+  color: #6f9bff;
+  min-height: 32px;
+  padding: 4px 14px;
+  font-weight: 600;
+  font-size: var(--t-sh);
+  border-radius: 999px;
+}
+@keyframes toastIn {
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">GROW</div>
+    <div class="tagline">筋トレの成長を見える化</div>
+  </header>
+
+  <div id="sample-notice-container"></div>
+
+  <!-- Record Tab -->
+  <div id="tab-record" class="tab-content active">
+    <div id="streak-banner"></div>
+    <div class="card">
+      <h2>記録を追加</h2>
+      <div class="field">
+        <label>日付</label>
+        <input type="date" id="rec-date">
+      </div>
+      <div class="field">
+        <label>カテゴリ</label>
+        <select id="rec-category">
+          <option value="胸">胸</option>
+          <option value="背中">背中</option>
+          <option value="脚">脚</option>
+          <option value="肩">肩</option>
+          <option value="腕">腕</option>
+          <option value="体幹">体幹</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>種目</label>
+        <div class="row" style="margin-bottom:8px">
+          <input type="text" id="rec-exercise" list="rec-exercise-list" placeholder="選択または入力で検索" autocomplete="off">
+          <datalist id="rec-exercise-list"></datalist>
+          <button class="secondary small" style="flex:0 0 auto" onclick="showAddExercise()">＋追加</button>
+        </div>
+        <div id="prev-record" class="previous" style="display:none"></div>
+      </div>
+      <div class="field">
+        <label id="rec-sets-label">セット (重量 × レップ)</label>
+        <div id="set-rows" class="set-rows"></div>
+        <button class="add-set-btn" onclick="addSetRow()" type="button">＋ セットを追加</button>
+      </div>
+      <div class="field">
+        <label>メモ (任意)</label>
+        <textarea id="rec-memo" placeholder="調子、フォーム、痛み、など"></textarea>
+      </div>
+      <button class="block" onclick="saveWorkout()">保存</button>
+    </div>
+
+    <div id="record-filter-bar"></div>
+    <div id="recent-records-header"></div>
+    <div id="recent-records"></div>
+  </div>
+
+  <!-- Weight Tab -->
+  <div id="tab-weight" class="tab-content">
+    <div class="card">
+      <h2>体重を記録</h2>
+      <div class="row">
+        <div class="field"><label>日付</label><input type="date" id="bw-date"></div>
+        <div class="field"><label>体重(kg)</label><input type="number" step="0.1" inputmode="decimal" id="bw-weight"></div>
+      </div>
+      <button class="block" onclick="saveBodyWeight()">保存</button>
+    </div>
+    <div class="card">
+      <h2>体重推移</h2>
+      <div class="chart-box"><canvas id="weightChart"></canvas></div>
+      <div id="weight-empty" class="empty" style="display:none">
+        記録がありません
+        <div class="sample-cta"><button class="ghost small" onclick="loadSampleData()">🧪 サンプルデータを試す</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div id="weight-list-header"></div>
+      <div id="weight-list"></div>
+    </div>
+  </div>
+
+  <!-- Analysis Tab -->
+  <div id="tab-analysis" class="tab-content">
+    <div id="analysis-empty-banner"></div>
+
+    <div class="jump-chips" id="analysis-chips">
+      <button data-target="sec-profile" onclick="jumpTo('sec-profile')">強さ</button>
+      <button data-target="sec-last" onclick="jumpTo('sec-last')">最終実施</button>
+      <button data-target="sec-heatmap" onclick="jumpTo('sec-heatmap')">🔥 ヒートマップ</button>
+      <button data-target="sec-volume" onclick="jumpTo('sec-volume')">週ボリューム</button>
+      <button data-target="sec-share" onclick="jumpTo('sec-share')">⚖️ バランス</button>
+      <button data-target="sec-ranking" onclick="jumpTo('sec-ranking')">📈 ランキング</button>
+      <button data-target="sec-exercise" onclick="jumpTo('sec-exercise')">種目別</button>
+      <button data-target="sec-pr" onclick="jumpTo('sec-pr')">🏆 ベスト</button>
+    </div>
+
+    <div class="card" id="sec-profile">
+      <h2>年齢・体格・強さ</h2>
+      <div id="profile-stats" class="stat-grid"></div>
+      <div id="strength-list" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="sec-last">
+      <h2>部位の最終実施日</h2>
+      <div id="category-last"></div>
+    </div>
+
+    <div class="card" id="sec-heatmap">
+      <h2>🔥 トレーニング・ヒートマップ</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:4px">直近13週間の日々のボリューム (色が濃いほどボリュームが多い日)</p>
+      <div id="heatmap" class="heatmap"></div>
+      <div class="heatmap-legend">
+        少 <span class="cell" style="background:var(--surface-2)"></span>
+        <span class="cell" style="background:rgba(var(--primary-rgb),0.25)"></span>
+        <span class="cell" style="background:rgba(var(--primary-rgb),0.5)"></span>
+        <span class="cell" style="background:rgba(var(--primary-rgb),0.75)"></span>
+        <span class="cell" style="background:rgba(var(--primary-rgb),1)"></span>
+        多
+      </div>
+    </div>
+
+    <div class="card" id="sec-volume">
+      <h2>週ボリューム (カテゴリ別)</h2>
+      <div class="chart-box"><canvas id="volumeChart"></canvas></div>
+      <div id="volume-empty" class="empty" style="display:none">
+        データがありません
+        <div class="sample-cta"><button class="ghost small" onclick="loadSampleData()">🧪 サンプルデータを試す</button></div>
+      </div>
+    </div>
+
+    <div class="card" id="sec-share">
+      <h2>⚖️ バランス診断</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">過去4週間の合計ボリューム比。前後・上下・大小のバランスを数値で確認</p>
+      <div id="balance-diagnosis"></div>
+    </div>
+
+    <div class="card" id="sec-ranking">
+      <h2>📈 成長ランキング</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">過去3ヶ月の推定1RM変化率</p>
+      <div id="growth-ranking"></div>
+    </div>
+
+    <div class="card" id="sec-exercise">
+      <h2>種目別の推移</h2>
+      <p class="muted" style="font-size:11px;margin-bottom:8px">※推定1RM は Epley 式 (weight × (1 + reps/30)) による参考値</p>
+      <div class="row" style="margin-bottom:10px">
+        <select id="analyze-exercise"><option value="">種目を選択</option></select>
+        <select id="analyze-metric">
+          <option value="oneRM">推定1RM</option>
+          <option value="volume">総挙上量</option>
+        </select>
+      </div>
+      <div class="chart-box"><canvas id="exerciseChart"></canvas></div>
+      <div id="goal-display" style="margin-top:10px"></div>
+      <div id="growth-stats" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="sec-pr">
+      <h2>🏆 自己ベスト</h2>
+      <div id="pr-list"></div>
+    </div>
+  </div>
+
+  <!-- Report Tab -->
+  <div id="tab-report" class="tab-content">
+    <div class="card no-capture">
+      <h2>📤 他人に共有するレポート</h2>
+      <p class="muted">期間とマスク (個人情報を伏せる選択) を指定して、見やすい1ページを生成。PDF 保存して LINE/メール送付や、コーチに見せるのに使えます。</p>
+      <div class="field" style="margin-top:10px">
+        <label>期間</label>
+        <select id="report-period">
+          <option value="30">過去1ヶ月</option>
+          <option value="90" selected>過去3ヶ月</option>
+          <option value="180">過去6ヶ月</option>
+          <option value="365">過去1年</option>
+        </select>
+      </div>
+      <button class="block" onclick="showMaskDialog('report')">レポート生成</button>
+    </div>
+    <div id="report-empty-banner"></div>
+    <div id="report-output"></div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div id="tab-settings" class="tab-content">
+    <div class="card">
+      <h2>プロフィール</h2>
+      <div class="field"><label>身長(cm)</label><input type="number" step="0.1" inputmode="decimal" id="set-height"></div>
+      <div class="field">
+        <label>生年月日</label>
+        <input type="date" id="set-birthday">
+        <div id="age-display" class="help-text" style="margin-top:6px"></div>
+      </div>
+      <div class="field">
+        <label>週次目標 (回/週)</label>
+        <input type="number" min="1" max="7" inputmode="numeric" id="set-weekly-goal">
+        <p class="help-text">この目標を達成した週が連続するほど Streak が伸びます</p>
+      </div>
+      <button class="block" onclick="saveProfile()">保存</button>
+    </div>
+
+    <div class="card">
+      <h2>表示</h2>
+      <div class="field">
+        <label>テーマ</label>
+        <select id="set-theme">
+          <option value="system">システムに合わせる</option>
+          <option value="light">ライト</option>
+          <option value="dark">ダーク</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔢 プレート計算</h2>
+      <div class="row">
+        <div class="field"><label>バー重量 (kg)</label><input type="number" step="0.5" inputmode="decimal" id="set-bar"></div>
+      </div>
+      <div class="field">
+        <label>使えるプレート (カンマ区切り kg)</label>
+        <input type="text" id="set-plates" placeholder="25,20,15,10,5,2.5,1.25">
+        <p class="help-text">片側ぶんの種類。例: 「25,20,15,10,5,2.5,1.25」</p>
+      </div>
+      <button class="block" onclick="savePlateSettings()">保存</button>
+    </div>
+
+    <div class="card">
+      <h2>バックアップ・出力</h2>
+      <div id="backup-reminder"></div>
+      <button class="block" onclick="exportJSON()" style="margin-bottom:8px">📦 移行用エクスポート (JSON)</button>
+      <button class="secondary block" onclick="document.getElementById('import-file').click()" style="margin-bottom:8px">📥 インポート (JSON)</button>
+      <input type="file" id="import-file" style="display:none" accept=".json,application/json" onchange="importJSON(event)">
+      <button class="secondary block" onclick="showMaskDialog('csv')">📤 CSV出力 (マスク選択あり)</button>
+    </div>
+
+    <div class="card">
+      <h2>サンプルデータ</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">グラフやレポートの見た目を試したいときに使えます。サンプルは「サンプル」タグ付きで保存されるので、後でまとめて削除できます。</p>
+      <button class="secondary block" onclick="loadSampleData()" style="margin-bottom:8px">🧪 サンプルデータを読み込む</button>
+      <button class="secondary block" id="remove-sample-btn" onclick="removeSampleData()" style="display:none">🗑 サンプルだけ削除</button>
+    </div>
+
+    <div class="card">
+      <h2>登録済みの種目</h2>
+      <button class="secondary block" style="margin-bottom:12px" onclick="addPresetExercises()">＋ プリセット種目を追加</button>
+      <div id="exercise-manage"></div>
+    </div>
+
+    <div class="card">
+      <h2>クイック削除</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">「全部消す」のショートカット。普段の選択削除は<b>記録タブ・体重タブの「選択」ボタン</b>から。削除前に「📦 移行用エクスポート」でバックアップを取ることをおすすめします。</p>
+      <button class="secondary block" onclick="clearAllWorkouts()" style="margin-bottom:8px">🗑 トレーニング記録を全削除</button>
+      <button class="secondary block" onclick="clearAllWeights()">🗑 体重記録を全削除</button>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ 全データ削除</h2>
+      <p class="muted" style="font-size:12px;margin-bottom:10px">すべての記録・プロフィール・カスタム種目・テーマ・目標が削除されます。元に戻せません。</p>
+      <button class="danger block" onclick="confirmReset()">全データを削除</button>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="active" data-tab="record" onclick="switchTab('record')"><span class="icon">📝</span>記録</button>
+    <button data-tab="weight" onclick="switchTab('weight')"><span class="icon">⚖️</span>体重</button>
+    <button data-tab="analysis" onclick="switchTab('analysis')"><span class="icon">📊</span>分析</button>
+    <button data-tab="report" onclick="switchTab('report')"><span class="icon">📤</span>共有</button>
+    <button data-tab="settings" onclick="switchTab('settings')"><span class="icon">⚙️</span>設定</button>
+  </nav>
+
+  <button id="timer-fab" class="timer-fab" onclick="openTimer()" aria-label="セット間タイマー">⏱</button>
+</div>
+
+<div id="modal-root"></div>
+<div id="celebration-root"></div>
+<div id="toast-root"></div>
+
+<script>
+"use strict";
+
+// ========== Constants ==========
+const STORAGE_KEY = "kintore_app_v1";
+const CATEGORIES = ["胸", "背中", "脚", "肩", "腕", "体幹"];
+const CAT_COLORS = ["#e57373", "#64b5f6", "#81c784", "#ffb74d", "#ba68c8", "#4db6ac"];
+
+const PRESET_EXERCISES = {
+  "胸": ["ベンチプレス", "インクラインベンチプレス", "ダンベルベンチプレス", "ダンベルフライ", "チェストプレス", "プッシュアップ", "ディップス"],
+  "背中": ["デッドリフト", "懸垂(チンニング)", "ラットプルダウン", "ベントオーバーロウ", "ダンベルロウ", "シーテッドロウ"],
+  "脚": ["スクワット", "レッグプレス", "レッグエクステンション", "レッグカール", "ルーマニアンデッドリフト", "ブルガリアンスクワット", "ヒップスラスト", "カーフレイズ"],
+  "肩": ["ショルダープレス", "サイドレイズ", "フロントレイズ", "リアレイズ", "アップライトロウ", "シュラッグ"],
+  "腕": ["バーベルカール", "ダンベルカール", "ハンマーカール", "トライセプスエクステンション", "トライセプスプッシュダウン", "ナローベンチプレス"],
+  "体幹": ["プランク", "クランチ", "レッグレイズ", "アブローラー", "ロシアンツイスト", "サイドプランク"]
+};
+
+// Time-based (seconds × sets) instead of (kg × reps × sets)
+const PRESET_TIME_EXERCISES = new Set(["プランク", "サイドプランク"]);
+
+function buildPresetExercises() {
+  const list = [];
+  Object.entries(PRESET_EXERCISES).forEach(([category, names]) => {
+    names.forEach(name => {
+      const ex = { id: uuid(), name, category };
+      if (PRESET_TIME_EXERCISES.has(name)) ex.isTime = true;
+      list.push(ex);
+    });
+  });
+  return list;
+}
+
+function isTimeExercise(name) {
+  const ex = state.exercises.find(e => e.name === name);
+  return ex?.isTime === true;
+}
+
+function defaultState() {
+  return {
+    workouts: [],
+    weights: [],
+    exercises: [],
+    settings: { themeMode: "system", height: null, birthday: null, age: null, goals: {}, barWeight: 20, plates: [25, 20, 15, 10, 5, 2.5, 1.25], weeklyGoal: 3 }
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      const s = defaultState();
+      s.exercises = buildPresetExercises();
+      return s;
+    }
+    const parsed = JSON.parse(raw);
+    const def = defaultState();
+    const settings = { ...def.settings, ...(parsed.settings || {}) };
+    // Migrate legacy `theme` to `themeMode`
+    if (parsed.settings && parsed.settings.theme && !parsed.settings.themeMode) {
+      settings.themeMode = parsed.settings.theme;
+    }
+    if (!settings.goals) settings.goals = {};
+    if (settings.barWeight == null) settings.barWeight = 20;
+    if (!Array.isArray(settings.plates) || settings.plates.length === 0) settings.plates = [25, 20, 15, 10, 5, 2.5, 1.25];
+    if (settings.weeklyGoal == null) settings.weeklyGoal = 3;
+    if (settings.plans) delete settings.plans; // legacy field, no longer used
+    return {
+      workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
+      weights: Array.isArray(parsed.weights) ? parsed.weights : [],
+      exercises: Array.isArray(parsed.exercises) ? parsed.exercises : [],
+      settings
+    };
+  } catch (e) {
+    return defaultState();
+  }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadState();
+
+// Selection mode state (per list)
+// showAllManual: user toggled "もっと見る" — persists across selection mode toggle
+// showAllForSelection: forced expand while in selection mode — auto-cleared on exit
+const selectionState = {
+  records: { active: false, selected: new Set(), showAllManual: false, showAllForSelection: false },
+  weights: { active: false, selected: new Set(), showAllManual: false, showAllForSelection: false }
+};
+
+// Filter state for records list (session-only, not persisted)
+const recordFilter = { exercise: "", memoOnly: false };
+
+function setRecordFilter(field, value) {
+  recordFilter[field] = value;
+  // Filter changes invalidate selection mode (selected ids might no longer be visible)
+  if (selectionState.records.active) selectionState.records.selected.clear();
+  renderRecordTab();
+}
+
+function clearRecordFilter() {
+  recordFilter.exercise = "";
+  recordFilter.memoOnly = false;
+  renderRecordTab();
+}
+
+function getFilteredWorkouts() {
+  let list = state.workouts;
+  if (recordFilter.exercise) list = list.filter(w => w.exercise === recordFilter.exercise);
+  if (recordFilter.memoOnly) list = list.filter(w => w.memo && w.memo.trim());
+  return list;
+}
+
+function enterRecordsSelection() {
+  selectionState.records.active = true;
+  selectionState.records.selected.clear();
+  selectionState.records.showAllForSelection = true;
+  renderRecordTab();
+}
+function exitRecordsSelection() {
+  selectionState.records.active = false;
+  selectionState.records.selected.clear();
+  selectionState.records.showAllForSelection = false; // clear selection-driven expand; manual stays
+  renderRecordTab();
+}
+function toggleRecordSelection(id) {
+  const s = selectionState.records.selected;
+  if (s.has(id)) s.delete(id); else s.add(id);
+  renderRecordTab();
+}
+function selectAllRecords() {
+  selectionState.records.selected = new Set(getFilteredWorkouts().map(w => w.id));
+  renderRecordTab();
+}
+function clearRecordsSelection() {
+  selectionState.records.selected.clear();
+  renderRecordTab();
+}
+function deleteSelectedRecords() {
+  const sel = selectionState.records.selected;
+  if (sel.size === 0) return;
+  const removed = state.workouts.filter(w => sel.has(w.id));
+  state.workouts = state.workouts.filter(w => !sel.has(w.id));
+  saveState();
+  exitRecordsSelection();
+  renderSampleNotice();
+  showUndo(`${removed.length}件を削除しました`, () => { state.workouts.push(...removed); });
+}
+function toggleShowAllRecords() {
+  const y = window.scrollY;
+  selectionState.records.showAllManual = !selectionState.records.showAllManual;
+  renderRecordTab();
+  requestAnimationFrame(() => window.scrollTo(0, y));
+}
+
+function enterWeightsSelection() {
+  selectionState.weights.active = true;
+  selectionState.weights.selected.clear();
+  selectionState.weights.showAllForSelection = true;
+  renderWeightTab();
+}
+function exitWeightsSelection() {
+  selectionState.weights.active = false;
+  selectionState.weights.selected.clear();
+  selectionState.weights.showAllForSelection = false;
+  renderWeightTab();
+}
+function toggleWeightSelection(id) {
+  const s = selectionState.weights.selected;
+  if (s.has(id)) s.delete(id); else s.add(id);
+  renderWeightTab();
+}
+function selectAllWeights() {
+  selectionState.weights.selected = new Set(state.weights.map(w => w.id));
+  renderWeightTab();
+}
+function clearWeightsSelection() {
+  selectionState.weights.selected.clear();
+  renderWeightTab();
+}
+function deleteSelectedWeights() {
+  const sel = selectionState.weights.selected;
+  if (sel.size === 0) return;
+  const removed = state.weights.filter(w => sel.has(w.id));
+  state.weights = state.weights.filter(w => !sel.has(w.id));
+  saveState();
+  exitWeightsSelection();
+  renderSampleNotice();
+  showUndo(`${removed.length}件を削除しました`, () => { state.weights.push(...removed); });
+}
+function toggleShowAllWeights() {
+  const y = window.scrollY;
+  selectionState.weights.showAllManual = !selectionState.weights.showAllManual;
+  renderWeightTab();
+  requestAnimationFrame(() => window.scrollTo(0, y));
+}
+
+// ========== Helpers ==========
+function uuid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function today() {
+  const d = new Date();
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0, 10);
+}
+function localDateStr(d) {
+  const tz = d.getTimezoneOffset() * 60000;
+  return new Date(d - tz).toISOString().slice(0, 10);
+}
+function daysBetween(a, b) {
+  const da = new Date(a + "T00:00:00");
+  const db = new Date(b + "T00:00:00");
+  return Math.round((db - da) / 86400000);
+}
+function epley1RM(weight, reps) {
+  if (!reps || reps < 1) return weight;
+  if (reps === 1) return weight;
+  return weight * (1 + reps / 30);
+}
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function getCssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+function weekKey(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - day);
+  return localDateStr(d);
+}
+function fmtKg(v) { return v >= 1000 ? (v / 1000).toFixed(1) + "t" : Math.round(v) + "kg"; }
+
+// === Per-set helpers (with legacy compat) ===
+function getSets(w) {
+  if (Array.isArray(w.sets)) return w.sets;
+  // Legacy: w.sets is a count, with uniform w.weight / w.reps
+  const n = Number(w.sets) || 1;
+  return Array.from({ length: n }, () => ({ weight: Number(w.weight) || 0, reps: Number(w.reps) || 0 }));
+}
+
+function totalVolume(w) {
+  return getSets(w).reduce((s, set) => s + set.weight * set.reps, 0);
+}
+
+function getBest1RM(w) {
+  const sets = getSets(w);
+  if (sets.length === 0) return 0;
+  return Math.max(...sets.map(s => epley1RM(s.weight, s.reps)));
+}
+
+function getMaxWeight(w) {
+  const sets = getSets(w);
+  if (sets.length === 0) return 0;
+  return Math.max(...sets.map(s => s.weight));
+}
+
+function getTotalReps(w) {
+  return getSets(w).reduce((s, set) => s + set.reps, 0);
+}
+
+// === Streak calculation (week-goal-based) ===
+function weekStartOf(d) {
+  // Returns Monday of the week containing date d (Date object), as Date
+  const day = (d.getDay() + 6) % 7; // Mon = 0
+  const m = new Date(d);
+  m.setHours(0, 0, 0, 0);
+  m.setDate(m.getDate() - day);
+  return m;
+}
+
+function thisWeekSessions() {
+  // Distinct dates with any workout in the current Mon-Sun week
+  const monday = weekStartOf(new Date());
+  const mondayStr = localDateStr(monday);
+  const dates = new Set();
+  state.workouts.forEach(w => { if (w.date >= mondayStr) dates.add(w.date); });
+  return dates.size;
+}
+
+function sessionsInWeek(mondayDate) {
+  // Distinct dates in [mondayDate, mondayDate+7)
+  const start = localDateStr(mondayDate);
+  const endD = new Date(mondayDate); endD.setDate(endD.getDate() + 7);
+  const end = localDateStr(endD);
+  const dates = new Set();
+  state.workouts.forEach(w => { if (w.date >= start && w.date < end) dates.add(w.date); });
+  return dates.size;
+}
+
+function computeWeeklyStreak() {
+  // Returns count of consecutive weeks (most recent and going back) where weekly goal was met.
+  // If current week not yet met, count from last week back.
+  const goal = state.settings.weeklyGoal || 3;
+  let count = 0;
+  let cursor = weekStartOf(new Date());
+  const thisWeek = sessionsInWeek(cursor);
+  if (thisWeek < goal) {
+    // Current week not yet achieved: count back from last week
+    cursor.setDate(cursor.getDate() - 7);
+  }
+  while (true) {
+    const n = sessionsInWeek(cursor);
+    if (n >= goal) {
+      count++;
+      cursor.setDate(cursor.getDate() - 7);
+    } else break;
+    if (count > 520) break; // safety: > 10 years
+  }
+  return count;
+}
+
+function getAge() {
+  if (state.settings.birthday) {
+    const bd = new Date(state.settings.birthday + "T00:00:00");
+    if (!isNaN(bd.getTime())) {
+      const now = new Date();
+      let age = now.getFullYear() - bd.getFullYear();
+      const m = now.getMonth() - bd.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < bd.getDate())) age--;
+      return age >= 0 ? age : null;
+    }
+  }
+  return state.settings.age ?? null;
+}
+
+// ========== Tabs ==========
+function switchTab(name) {
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  document.querySelectorAll(".tabs button").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === name);
+  });
+  window.scrollTo(0, 0);
+  if (name === "record") renderRecordTab();
+  if (name === "weight") renderWeightTab();
+  if (name === "analysis") renderAnalysisTab();
+  if (name === "settings") renderSettingsTab();
+  if (name === "report") renderReportTab();
+}
+
+// ========== Exercises ==========
+function getExercisesForCategory(category) {
+  return state.exercises.filter(e => e.category === category);
+}
+
+function showAddExercise() {
+  const category = document.getElementById("rec-category").value;
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>${escapeHtml(category)} に種目を追加</h2>
+      <div class="field"><label>種目名</label><input type="text" id="add-ex-name" placeholder="例: インクラインダンベルプレス" autofocus></div>
+      <label class="checkbox-row"><input type="checkbox" id="add-ex-istime"> 時間ベースの種目 (プランク等、秒数で記録)</label>
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">キャンセル</button>
+        <button onclick="confirmAddExercise('${escapeHtml(category)}')">追加</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(() => document.getElementById("add-ex-name")?.focus(), 50);
+}
+
+function confirmAddExercise(category) {
+  const name = (document.getElementById("add-ex-name").value || "").trim();
+  const isTime = document.getElementById("add-ex-istime").checked;
+  if (!name) { alert("種目名を入力してください"); return; }
+  if (state.exercises.some(e => e.name === name && e.category === category)) {
+    alert("その種目はすでに登録されています");
+    return;
+  }
+  const ex = { id: uuid(), name, category };
+  if (isTime) ex.isTime = true;
+  state.exercises.push(ex);
+  saveState();
+  closeModal();
+  populateExerciseSelect();
+  document.getElementById("rec-exercise").value = name;
+  updatePrevRecord();
+  updateRecordFormForExercise();
+}
+
+function populateExerciseSelect() {
+  const category = document.getElementById("rec-category").value;
+  const input = document.getElementById("rec-exercise");
+  const list = document.getElementById("rec-exercise-list");
+  const current = input.value;
+  list.innerHTML = "";
+  const exercises = getExercisesForCategory(category);
+  exercises.forEach(e => {
+    const opt = document.createElement("option");
+    opt.value = e.name;
+    list.appendChild(opt);
+  });
+  // Clear input if current value doesn't belong to this category
+  if (current && !exercises.some(e => e.name === current)) {
+    input.value = "";
+  }
+  updateRecordFormForExercise();
+}
+
+function updateRecordFormForExercise() {
+  const exName = document.getElementById("rec-exercise")?.value.trim();
+  const isTime = exName && isTimeExercise(exName);
+  const label = document.getElementById("rec-sets-label");
+  if (label) label.textContent = isTime ? "セット (時間)" : "セット (重量 × レップ)";
+  // Re-render set rows to reflect time/weight mode
+  initSetRowsForExercise();
+}
+
+function updatePrevRecord() {
+  const ex = document.getElementById("rec-exercise").value.trim();
+  const box = document.getElementById("prev-record");
+  if (!ex) { box.style.display = "none"; return; }
+  const records = state.workouts
+    .filter(w => w.exercise === ex)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  box.style.display = "block";
+  if (records.length === 0) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--text-muted)">前回の記録: <b style="color:var(--text)">なし</b></div>`;
+    return;
+  }
+  const r = records[0];
+  const goal = state.settings.goals?.[ex];
+  const pr = getPR(ex);
+  const current = pr ? pr.oneRM : 0;
+  let goalHTML = "";
+  if (goal && !isTimeExercise(ex)) {
+    const pct = Math.min(100, (current / goal) * 100);
+    const achieved = current >= goal;
+    goalHTML = `<div class="prev-goal">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px">
+        <span><span class="goal-tag">🎯 目標</span> ${goal}kg</span>
+        <span style="font-weight:600;color:${achieved ? "var(--success)" : "var(--text)"}">${achieved ? "✓ 達成" : current.toFixed(1) + "kg (" + pct.toFixed(0) + "%)"}</span>
+      </div>
+      <div class="progress-bar ${achieved ? "complete" : ""}" style="height:4px;margin:4px 0 0"><div class="fill" style="width:${pct}%"></div></div>
+    </div>`;
+  } else if (!isTimeExercise(ex)) {
+    goalHTML = `<div style="text-align:right;margin-top:4px"><button class="copy-btn" style="background:var(--surface-2);color:var(--text);font-size:11px;padding:3px 8px" onclick="setGoalForExercise('${escapeHtml(ex)}')">🎯 目標を設定</button></div>`;
+  }
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span>前回 (${r.date}): <b>${formatRecord(r)}</b></span>
+      <button class="copy-btn" onclick="fillFromPrevious()">前回と同じ</button>
+    </div>
+    ${r.memo ? `<div class="prev-memo">📝 ${escapeHtml(r.memo)}</div>` : ""}
+    ${goalHTML}
+  `;
+}
+
+function setGoalForExercise(ex) {
+  const current = state.settings.goals?.[ex] ?? "";
+  const input = prompt(`「${ex}」の目標推定1RM (kg) を入力 (空欄でクリア):`, current);
+  if (input === null) return;
+  if (!state.settings.goals) state.settings.goals = {};
+  const trimmed = input.trim();
+  if (trimmed === "") {
+    delete state.settings.goals[ex];
+  } else {
+    const v = parseFloat(trimmed);
+    if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
+    state.settings.goals[ex] = v;
+  }
+  saveState();
+  updatePrevRecord();
+}
+
+// ===== Plate calculator =====
+function openPlateCalc(btn) {
+  // Look up the weight input in the same row
+  const row = btn.closest(".set-row");
+  const wInp = row?.querySelector(".set-w");
+  const initial = wInp ? parseFloat(wInp.value) || 0 : 0;
+  showPlateCalc(initial, (newW) => {
+    if (wInp) wInp.value = newW;
+  });
+}
+
+function showPlateCalc(initial, onApply) {
+  const root = document.getElementById("modal-root");
+  const bar = state.settings.barWeight ?? 20;
+  const plates = state.settings.plates;
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>🔢 プレート計算機</h2>
+      <div class="field">
+        <label>目標重量 (バー + プレート合計)</label>
+        <input type="number" step="0.5" inputmode="decimal" id="plate-target" value="${initial || ""}" placeholder="例: 60">
+      </div>
+      <div class="muted" style="font-size:12px;margin-bottom:6px">バー重量: ${bar}kg / 使えるプレート (kg): ${plates.join(", ")}</div>
+      <div id="plate-result" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">閉じる</button>
+        <button id="plate-apply-btn">この重量を入力</button>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById("plate-target");
+  const update = () => renderPlateResult(parseFloat(input.value), bar, plates);
+  input.oninput = update;
+  update();
+  document.getElementById("plate-apply-btn").onclick = () => {
+    const v = parseFloat(input.value);
+    if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
+    onApply(v);
+    closeModal();
+  };
+}
+
+function renderPlateResult(target, bar, plates) {
+  const box = document.getElementById("plate-result");
+  if (!box) return;
+  if (isNaN(target) || target <= 0) { box.innerHTML = '<div class="muted">目標重量を入力してください</div>'; return; }
+  if (target < bar) {
+    box.innerHTML = `<div class="muted">バー (${bar}kg) より軽いため、ダンベル等を使ってください</div>`;
+    return;
+  }
+  if ((target - bar) % 2 !== 0 && Math.abs(((target - bar) * 10) % 5) > 0.001) {
+    // Difference per side has odd half-kg quirks — just compute best-effort
+  }
+  const perSide = (target - bar) / 2;
+  const sorted = [...plates].sort((a, b) => b - a);
+  // Greedy: largest first
+  const result = [];
+  let remain = perSide;
+  for (const p of sorted) {
+    while (remain >= p - 0.001) {
+      result.push(p);
+      remain = Math.round((remain - p) * 1000) / 1000;
+    }
+  }
+  if (remain > 0.001) {
+    box.innerHTML = `<div style="color:var(--warning)">⚠️ ぴったり ${target}kg を組めません (片側 ${perSide}kg、残 ${remain}kg)</div>`;
+    return;
+  }
+  // Group consecutive same plates
+  const grouped = [];
+  result.forEach(p => {
+    if (grouped.length > 0 && grouped[grouped.length - 1].weight === p) grouped[grouped.length - 1].count++;
+    else grouped.push({ weight: p, count: 1 });
+  });
+  const html = grouped.map(g => `<span class="badge" style="background:var(--primary-soft);color:var(--primary);font-weight:600;font-size:13px;margin:2px 4px 2px 0;padding:4px 10px">${g.weight}kg ×${g.count}</span>`).join("");
+  box.innerHTML = `
+    <div style="background:var(--surface-2);padding:12px;border-radius:8px">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px">片側 ${perSide}kg のプレート構成</div>
+      <div>${html}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">バー ${bar}kg + (${grouped.map(g => `${g.weight}×${g.count}`).join(" + ")}) × 2 = ${target}kg</div>
+    </div>
+  `;
+}
+
+function formatRecord(r) {
+  const sets = getSets(r);
+  const isTime = isTimeExercise(r.exercise);
+  if (sets.length === 0) return "";
+  const allBW = !isTime && sets.every(s => s.weight === 0);
+  const uniform = sets.every(s => s.weight === sets[0].weight && s.reps === sets[0].reps);
+  if (uniform) {
+    if (isTime) return `${sets[0].reps}秒 × ${sets.length}セット`;
+    if (allBW) return `自重 × ${sets[0].reps}回 × ${sets.length}セット`;
+    return `${sets[0].weight}kg × ${sets[0].reps}回 × ${sets.length}セット`;
+  }
+  if (isTime) return sets.map(s => `${s.reps}秒`).join(" / ");
+  if (allBW) return sets.map(s => `自重×${s.reps}`).join(" / ");
+  return sets.map(s => `${s.weight === 0 ? "自重" : s.weight + "kg"}×${s.reps}`).join(" / ");
+}
+
+function fillFromPrevious() {
+  const ex = document.getElementById("rec-exercise").value.trim();
+  if (!ex) return;
+  const records = state.workouts.filter(w => w.exercise === ex).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (records.length === 0) return;
+  renderSetRowsForSets(getSets(records[0]));
+}
+
+// ===== Per-set rows in the entry form =====
+function renderSetRowsForSets(sets) {
+  const container = document.getElementById("set-rows");
+  if (!container) return;
+  container.innerHTML = "";
+  if (sets.length === 0) {
+    addSetRow();
+  } else {
+    sets.forEach(s => addSetRow(s.weight, s.reps));
+  }
+}
+
+function addSetRow(weight, reps) {
+  const container = document.getElementById("set-rows");
+  if (!container) return;
+  const rows = container.querySelectorAll(".set-row");
+  const lastWeight = rows.length > 0 ? rows[rows.length - 1].querySelector(".set-w").value : "";
+  const useWeight = weight != null ? weight : lastWeight;
+  const useReps = reps != null ? reps : "";
+  const ex = document.getElementById("rec-exercise")?.value.trim() || "";
+  const isTime = isTimeExercise(ex);
+  const div = document.createElement("div");
+  div.className = "set-row";
+  div.innerHTML = `
+    <span class="set-num">${rows.length + 1}</span>
+    ${isTime ? "" : `<input class="set-w" type="number" step="0.5" inputmode="decimal" placeholder="kg" value="${useWeight}"><button class="plate-btn" type="button" onclick="openPlateCalc(this)" aria-label="プレート計算">🔢</button><span class="set-x">×</span>`}
+    <input class="set-r" type="number" inputmode="numeric" placeholder="${isTime ? "秒" : "回"}" value="${useReps}">
+    <button class="set-rm" type="button" onclick="removeSetRow(this)" aria-label="このセットを削除">−</button>
+  `;
+  if (isTime) {
+    // Hidden weight input to keep API consistent (0)
+    const hw = document.createElement("input");
+    hw.type = "hidden";
+    hw.className = "set-w";
+    hw.value = "0";
+    div.appendChild(hw);
+  }
+  container.appendChild(div);
+  renumberSetRows();
+}
+
+function removeSetRow(btn) {
+  const container = document.getElementById("set-rows");
+  if (!container) return;
+  if (container.children.length <= 1) return; // keep at least 1
+  btn.closest(".set-row").remove();
+  renumberSetRows();
+}
+
+function renumberSetRows() {
+  document.querySelectorAll("#set-rows .set-row").forEach((row, i) => {
+    row.querySelector(".set-num").textContent = i + 1;
+  });
+}
+
+function getCurrentSets() {
+  const out = [];
+  document.querySelectorAll("#set-rows .set-row").forEach(row => {
+    const wInp = row.querySelector(".set-w");
+    const rInp = row.querySelector(".set-r");
+    const w = wInp ? parseFloat(wInp.value) : 0;
+    const r = parseInt(rInp.value);
+    if (!isNaN(r) && r > 0) out.push({ weight: isNaN(w) ? 0 : Math.max(0, w), reps: r });
+  });
+  return out;
+}
+
+function initSetRowsForExercise() {
+  const ex = document.getElementById("rec-exercise")?.value.trim() || "";
+  // Default: load last sets for this exercise, or 1 empty row
+  if (!ex) {
+    renderSetRowsForSets([]);
+    return;
+  }
+  const records = state.workouts
+    .filter(w => w.exercise === ex)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (records.length > 0) {
+    // Pre-fill with previous record's sets (weights only, reps blank for re-entry)
+    const prevSets = getSets(records[0]);
+    const blanked = prevSets.map(s => ({ weight: s.weight, reps: "" }));
+    renderSetRowsForSets(blanked);
+  } else {
+    renderSetRowsForSets([]);
+  }
+}
+
+// ========== Save workout ==========
+async function saveWorkout() {
+  const date = document.getElementById("rec-date").value;
+  const category = document.getElementById("rec-category").value;
+  const exercise = document.getElementById("rec-exercise").value.trim();
+  const isTime = isTimeExercise(exercise);
+  const sets = getCurrentSets();
+  const memo = document.getElementById("rec-memo").value.trim();
+
+  if (!date || !category || !exercise) { alert("日付・カテゴリ・種目を入力してください"); return; }
+  if (!state.exercises.some(e => e.name === exercise && e.category === category)) {
+    alert(`「${exercise}」は ${category} カテゴリに登録されていません。「＋追加」で新規登録するか、リストから選択してください`);
+    return;
+  }
+  if (sets.length === 0) {
+    alert(isTime ? "少なくとも1セット (秒数) を入力してください" : "少なくとも1セット (重量・レップ) を入力してください");
+    return;
+  }
+
+  const prev = getPR(exercise);
+  const prev1RM = prev ? prev.oneRM : 0;
+  const isFirstRecord = prev1RM === 0;
+
+  // Check for same-day same-exercise duplicate
+  const existing = state.workouts.find(w => w.date === date && w.exercise === exercise);
+  let workout;
+  if (existing) {
+    const choice = await sameDayPrompt(existing);
+    if (choice === "cancel") return;
+    if (choice === "overwrite") {
+      existing.sets = sets;
+      existing.memo = memo;
+      delete existing.isSample; // user edit
+      delete existing.weight; delete existing.reps;
+      workout = existing;
+      saveState();
+    } else { // append
+      workout = { id: uuid(), date, category, exercise, sets, memo };
+      state.workouts.push(workout);
+      saveState();
+    }
+  } else {
+    workout = { id: uuid(), date, category, exercise, sets, memo };
+    state.workouts.push(workout);
+    saveState();
+  }
+
+  const newScore = isTime ? getTotalReps(workout) : getBest1RM(workout);
+  if (isFirstRecord) {
+    showPRCelebration(exercise, newScore, true, isTime);
+  } else if (newScore > prev1RM + 0.01) {
+    showPRCelebration(exercise, newScore, false, isTime);
+  }
+  // Goal achievement (1RM-based, weight exercises only)
+  if (!isTime) {
+    const goal = state.settings.goals?.[exercise];
+    if (goal && prev1RM < goal && newScore >= goal) {
+      setTimeout(() => showGoalCelebration(exercise, goal), 1900); // play after PR animation
+    }
+  }
+
+  // Reset form
+  document.getElementById("rec-memo").value = "";
+  initSetRowsForExercise();
+  updatePrevRecord();
+  renderRecordTab();
+}
+
+function getPR(exerciseName) {
+  return getPRFrom(state.workouts, exerciseName);
+}
+
+function getPRFrom(workouts, exerciseName) {
+  const records = workouts.filter(w => w.exercise === exerciseName);
+  if (records.length === 0) return null;
+  const isTime = isTimeExercise(exerciseName);
+  let best = null;
+  for (const r of records) {
+    const score = isTime ? getTotalReps(r) : getBest1RM(r);
+    if (!best || score > best.oneRM) {
+      const maxW = getMaxWeight(r);
+      const sets = getSets(r);
+      // Find the specific set that produced the best 1RM
+      let bestSet = sets[0];
+      let bestScore = isTime ? sets[0].reps : epley1RM(sets[0].weight, sets[0].reps);
+      sets.forEach(s => {
+        const sc = isTime ? s.reps : epley1RM(s.weight, s.reps);
+        if (sc > bestScore) { bestScore = sc; bestSet = s; }
+      });
+      best = {
+        weight: bestSet.weight, reps: bestSet.reps, sets: sets.length,
+        oneRM: score, date: r.date, id: r.id, isTime,
+        record: r
+      };
+    }
+  }
+  return best;
+}
+
+function sameDayPrompt(existing) {
+  return new Promise(resolve => {
+    const root = document.getElementById("modal-root");
+    root.innerHTML = `<div class="modal-backdrop">
+      <div class="modal">
+        <h2>同じ種目を今日すでに記録</h2>
+        <p class="muted" style="font-size:13px;margin-bottom:14px">既存: <b style="color:var(--text)">${escapeHtml(formatRecord(existing))}</b></p>
+        <p style="font-size:14px;margin-bottom:10px">どうしますか?</p>
+        <button class="block" style="margin-bottom:6px" data-choice="append">＋ 別セットとして追加</button>
+        <button class="secondary block" style="margin-bottom:6px" data-choice="overwrite">既存を上書き (置き換え)</button>
+        <button class="secondary block" data-choice="cancel">キャンセル</button>
+      </div>
+    </div>`;
+    root.querySelectorAll("button[data-choice]").forEach(b => {
+      b.addEventListener("click", () => {
+        const choice = b.dataset.choice;
+        closeModal();
+        resolve(choice);
+      });
+    });
+  });
+}
+
+function showPRCelebration(exercise, score, isFirst, isTime) {
+  const root = document.getElementById("celebration-root");
+  const headline = isFirst ? "🎉 新しい種目スタート!" : "🎉 自己ベスト更新!";
+  const sub = isTime
+    ? `合計時間: ${Math.round(score)}秒`
+    : `推定1RM: ${score.toFixed(1)}kg`;
+  root.innerHTML = `<div class="pr-celebration"><div class="box">${headline}<br>${escapeHtml(exercise)}<br><span style="font-size:15px">${sub}</span></div></div>`;
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+  setTimeout(() => { root.innerHTML = ""; }, 1800);
+}
+
+function showGoalCelebration(exercise, goal) {
+  const root = document.getElementById("celebration-root");
+  root.innerHTML = `<div class="pr-celebration"><div class="box" style="background:linear-gradient(135deg, #34c759, #007aff)">🎯 目標達成!<br>${escapeHtml(exercise)}<br><span style="font-size:15px">${goal}kg を突破</span></div></div>`;
+  if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]);
+  setTimeout(() => { root.innerHTML = ""; }, 2200);
+}
+
+// ========== Edit modal (generic) ==========
+function openEditModal(opts) {
+  const root = document.getElementById("modal-root");
+  const fieldsHTML = opts.fields.map(f => {
+    const id = `edit-${f.name}`;
+    if (f.type === "select") {
+      return `<div class="field"><label>${f.label}</label><select id="${id}">${f.options.map(o => `<option value="${escapeHtml(o)}" ${o === f.value ? "selected" : ""}>${escapeHtml(o)}</option>`).join("")}</select></div>`;
+    } else if (f.type === "textarea") {
+      return `<div class="field"><label>${f.label}</label><textarea id="${id}">${escapeHtml(f.value || "")}</textarea></div>`;
+    } else {
+      const step = f.step ? `step="${f.step}"` : "";
+      return `<div class="field"><label>${f.label}</label><input type="${f.type}" id="${id}" value="${escapeHtml(f.value ?? "")}" ${step}></div>`;
+    }
+  }).join("");
+
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>${escapeHtml(opts.title)}</h2>
+      ${fieldsHTML}
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">キャンセル</button>
+        <button id="modal-save-btn">保存</button>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById("modal-save-btn").onclick = () => {
+    const values = {};
+    opts.fields.forEach(f => {
+      values[f.name] = document.getElementById(`edit-${f.name}`).value;
+    });
+    const err = opts.onSave(values);
+    if (!err) closeModal();
+  };
+
+  if (typeof opts.afterRender === "function") opts.afterRender();
+}
+
+function closeModal() {
+  document.getElementById("modal-root").innerHTML = "";
+}
+
+function editWorkout(id) {
+  const w = state.workouts.find(x => x.id === id);
+  if (!w) return;
+  const isTime = isTimeExercise(w.exercise);
+  const sets = getSets(w);
+  const exForCat = state.exercises.filter(e => e.category === w.category).map(e => e.name);
+  if (!exForCat.includes(w.exercise)) exForCat.push(w.exercise);
+
+  const root = document.getElementById("modal-root");
+  const catOptions = CATEGORIES.map(c => `<option value="${c}" ${c === w.category ? "selected" : ""}>${c}</option>`).join("");
+  const exOptions = exForCat.sort().map(n => `<option value="${escapeHtml(n)}" ${n === w.exercise ? "selected" : ""}>${escapeHtml(n)}</option>`).join("");
+
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>記録を編集</h2>
+      <div class="field"><label>日付</label><input type="date" id="edit-date" value="${w.date}"></div>
+      <div class="field"><label>カテゴリ</label><select id="edit-category">${catOptions}</select></div>
+      <div class="field"><label>種目</label><select id="edit-exercise">${exOptions}</select></div>
+      <div class="field">
+        <label>${isTime ? "セット (時間)" : "セット (重量 × レップ)"}</label>
+        <div id="edit-set-rows" class="set-rows"></div>
+        <button class="add-set-btn" type="button" onclick="editAddSetRow()">＋ セットを追加</button>
+      </div>
+      <div class="field"><label>メモ</label><textarea id="edit-memo">${escapeHtml(w.memo || "")}</textarea></div>
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">キャンセル</button>
+        <button id="modal-save-btn">保存</button>
+      </div>
+    </div>
+  </div>`;
+
+  // Pre-fill set rows
+  editRenderSetRows(sets, isTime);
+
+  // Category change re-filters exercise options
+  const catSel = document.getElementById("edit-category");
+  const exSel = document.getElementById("edit-exercise");
+  const originalExercise = w.exercise;
+  catSel.onchange = () => {
+    const newCat = catSel.value;
+    const opts = state.exercises.filter(e => e.category === newCat).map(e => e.name).sort();
+    // Always keep the original exercise as a selectable option (so user doesn't lose it)
+    const optsWithOriginal = opts.includes(originalExercise) ? opts : [originalExercise, ...opts];
+    exSel.innerHTML = optsWithOriginal.length === 0
+      ? `<option value="">(このカテゴリに種目なし)</option>`
+      : optsWithOriginal.map(n => `<option value="${escapeHtml(n)}" ${n === originalExercise ? "selected" : ""}>${escapeHtml(n)}${n === originalExercise && !opts.includes(n) ? " (元の種目)" : ""}</option>`).join("");
+  };
+
+  // Exercise change re-renders set rows (time/weight mode)
+  exSel.onchange = () => {
+    const newEx = exSel.value;
+    const newIsTime = isTimeExercise(newEx);
+    const currentSets = editGetCurrentSets();
+    editRenderSetRows(currentSets, newIsTime);
+  };
+
+  document.getElementById("modal-save-btn").onclick = () => {
+    const date = document.getElementById("edit-date").value;
+    const category = document.getElementById("edit-category").value;
+    const exercise = document.getElementById("edit-exercise").value;
+    const memo = document.getElementById("edit-memo").value.trim();
+    const newSets = editGetCurrentSets();
+    if (!exercise) { alert("種目を選択してください"); return; }
+    if (newSets.length === 0) { alert("最低1セット入力してください"); return; }
+    w.date = date;
+    w.category = category;
+    w.exercise = exercise;
+    w.sets = newSets;
+    w.memo = memo;
+    delete w.coachComment; // legacy field cleanup
+    // Drop legacy fields if present
+    delete w.weight; delete w.reps;
+    if (w.isSample) delete w.isSample;
+    saveState();
+    closeModal();
+    renderRecordTab();
+    renderSampleNotice();
+    if (document.getElementById("tab-analysis").classList.contains("active")) renderAnalysisTab();
+  };
+}
+
+function editRenderSetRows(sets, isTime) {
+  const container = document.getElementById("edit-set-rows");
+  if (!container) return;
+  container.innerHTML = "";
+  (sets.length === 0 ? [{ weight: 0, reps: 0 }] : sets).forEach((s) => editAddSetRow(s.weight, s.reps, isTime));
+}
+
+function editAddSetRow(weight, reps, isTimeOverride) {
+  const container = document.getElementById("edit-set-rows");
+  if (!container) return;
+  const ex = document.getElementById("edit-exercise")?.value || "";
+  const isTime = (isTimeOverride !== undefined) ? isTimeOverride : isTimeExercise(ex);
+  const rows = container.querySelectorAll(".set-row");
+  const lastWeight = rows.length > 0 ? rows[rows.length - 1].querySelector(".set-w")?.value : "";
+  const useWeight = weight != null ? weight : lastWeight;
+  const useReps = reps != null && reps !== 0 ? reps : (reps === 0 ? "" : "");
+  const div = document.createElement("div");
+  div.className = "set-row";
+  div.innerHTML = `
+    <span class="set-num">${rows.length + 1}</span>
+    ${isTime ? "" : `<input class="set-w" type="number" step="0.5" inputmode="decimal" placeholder="kg" value="${useWeight}"><span class="set-x">×</span>`}
+    <input class="set-r" type="number" inputmode="numeric" placeholder="${isTime ? "秒" : "回"}" value="${useReps}">
+    <button class="set-rm" type="button" onclick="editRemoveSetRow(this)" aria-label="削除">−</button>
+  `;
+  if (isTime) {
+    const hw = document.createElement("input");
+    hw.type = "hidden"; hw.className = "set-w"; hw.value = "0";
+    div.appendChild(hw);
+  }
+  container.appendChild(div);
+  editRenumberSetRows();
+}
+
+function editRemoveSetRow(btn) {
+  const container = document.getElementById("edit-set-rows");
+  if (!container || container.children.length <= 1) return;
+  btn.closest(".set-row").remove();
+  editRenumberSetRows();
+}
+
+function editRenumberSetRows() {
+  document.querySelectorAll("#edit-set-rows .set-row").forEach((row, i) => {
+    row.querySelector(".set-num").textContent = i + 1;
+  });
+}
+
+function editGetCurrentSets() {
+  const out = [];
+  document.querySelectorAll("#edit-set-rows .set-row").forEach(row => {
+    const w = parseFloat(row.querySelector(".set-w")?.value);
+    const r = parseInt(row.querySelector(".set-r")?.value);
+    if (!isNaN(r) && r > 0) out.push({ weight: isNaN(w) ? 0 : Math.max(0, w), reps: r });
+  });
+  return out;
+}
+
+function editWeight(id) {
+  const w = state.weights.find(x => x.id === id);
+  if (!w) return;
+  openEditModal({
+    title: "体重を編集",
+    fields: [
+      { name: "date", label: "日付", type: "date", value: w.date },
+      { name: "weight", label: "体重(kg)", type: "number", value: w.weight, step: "0.1" }
+    ],
+    onSave: (v) => {
+      const weight = parseFloat(v.weight);
+      if (isNaN(weight) || weight <= 0) { alert("体重を確認してください"); return true; }
+      w.date = v.date;
+      w.weight = weight;
+      saveState();
+      renderWeightTab();
+    }
+  });
+}
+
+// ========== Record tab render ==========
+function renderRecordTab() {
+  populateExerciseSelect();
+  updatePrevRecord();
+  renderRecordFilterBar();
+  renderStreakBanner();
+
+  const sel = selectionState.records;
+  // Sort: date desc (newest day first), then id asc within same day (so within a session it's実施順 古→新)
+  const all = [...state.workouts].sort((a, b) => b.date.localeCompare(a.date) || a.id.localeCompare(b.id));
+  // Apply filter
+  let filtered = all;
+  if (recordFilter.exercise) filtered = filtered.filter(w => w.exercise === recordFilter.exercise);
+  if (recordFilter.memoOnly) filtered = filtered.filter(w => w.memo && w.memo.trim());
+  const hasFilter = !!(recordFilter.exercise || recordFilter.memoOnly);
+  const showAll = sel.showAllManual || sel.showAllForSelection;
+  const LIMIT = 15;
+  const list = (hasFilter || showAll) ? filtered : filtered.slice(0, LIMIT);
+
+  const headerEl = document.getElementById("recent-records-header");
+  const container = document.getElementById("recent-records");
+
+  // --- Header ---
+  let titleText;
+  if (hasFilter) {
+    const parts = [];
+    if (recordFilter.exercise) parts.push(`「${recordFilter.exercise}」`);
+    if (recordFilter.memoOnly) parts.push("メモあり");
+    titleText = `${parts.join(" / ")} (${filtered.length}件)`;
+  } else {
+    titleText = `最近の記録 (全${all.length}件)`;
+  }
+
+  if (all.length === 0) {
+    headerEl.innerHTML = `<div class="section-header-row"><span class="title">最近の記録</span></div>`;
+  } else if (sel.active) {
+    const n = sel.selected.size;
+    const allSelected = n === filtered.length && n > 0;
+    headerEl.innerHTML = `
+      <div class="section-header-row">
+        <span class="title active">${n > 0 ? `${n}件選択` : "項目を選択"}</span>
+        <span class="actions">
+          <button class="plain" onclick="${allSelected ? "clearRecordsSelection()" : "selectAllRecords()"}">${allSelected ? "解除" : "全て"}</button>
+          ${n > 0 ? `<button class="plain del" onclick="deleteSelectedRecords()">削除 (${n})</button>` : ""}
+          <button class="plain strong" onclick="exitRecordsSelection()">完了</button>
+        </span>
+      </div>`;
+  } else {
+    headerEl.innerHTML = `
+      <div class="section-header-row">
+        <span class="title">${escapeHtml(titleText)}</span>
+        <button class="plain strong" onclick="enterRecordsSelection()">選択</button>
+      </div>`;
+  }
+
+  // --- Empty ---
+  if (all.length === 0) {
+    container.innerHTML = '<div class="empty"><div style="font-size:15px;color:var(--text);margin-bottom:6px">最初のセッションを記録しよう</div><div>上のフォームで日付・種目・セットを入れて保存</div><div class="sample-cta"><button class="ghost small" onclick="loadSampleData()">🧪 サンプルデータで試してみる</button></div></div>';
+    return;
+  }
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty">該当する記録がありません<div class="sample-cta"><button class="ghost small" onclick="clearRecordFilter()">絞り込みをクリア</button></div></div>';
+    return;
+  }
+
+  // --- Items ---
+  const itemsHTML = list.map(w => {
+    const pr = getPR(w.exercise);
+    const isPR = pr && pr.id === w.id;
+    const isTime = isTimeExercise(w.exercise);
+    if (sel.active) {
+      const isSel = sel.selected.has(w.id);
+      return `<div class="record-item in-selection ${isSel ? "selected" : ""}" onclick="toggleRecordSelection('${w.id}')">
+        <div class="select-circle ${isSel ? "selected" : ""}"></div>
+        <div class="content">
+          <div class="meta"><span class="badge">${w.category}</span> ${w.date}</div>
+          <div class="exercise">${escapeHtml(w.exercise)} ${isPR ? '<span class="badge best-badge">ベスト</span>' : ""}</div>
+          <div class="detail">${formatRecord(w)}</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="record-item">
+      <div class="meta">
+        <span><span class="badge">${w.category}</span> ${w.date}</span>
+        <span class="meta-actions">
+          <button class="icon-btn" onclick="editWorkout('${w.id}')" aria-label="編集">編集</button>
+          <button class="icon-btn danger" onclick="deleteWorkout('${w.id}')" aria-label="削除">削除</button>
+        </span>
+      </div>
+      <div class="exercise">${escapeHtml(w.exercise)} ${isPR ? '<span class="badge best-badge">ベスト</span>' : ""}</div>
+      <div class="detail">${formatRecord(w)}${!isTime && getBest1RM(w) > 0 ? ` <span class="muted" style="font-size:12px">(1RM ${getBest1RM(w).toFixed(1)}kg)</span>` : ""}</div>
+      ${w.memo ? `<div class="memo">${escapeHtml(w.memo)}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  // --- Show-more toggle (only relevant when no filter and not in selection; filter always shows all matches) ---
+  let moreHTML = "";
+  if (!sel.active && !hasFilter && filtered.length > LIMIT) {
+    moreHTML = sel.showAllManual
+      ? `<button class="plain block" onclick="toggleShowAllRecords()">少なく表示</button>`
+      : `<button class="plain block" onclick="toggleShowAllRecords()">もっと見る (残り ${filtered.length - LIMIT} 件)</button>`;
+  }
+
+  container.innerHTML = itemsHTML + moreHTML;
+}
+
+function renderStreakBanner() {
+  const box = document.getElementById("streak-banner");
+  if (!box) return;
+  if (state.workouts.length === 0) { box.innerHTML = ""; return; }
+  const goal = state.settings.weeklyGoal || 3;
+  const thisWeek = thisWeekSessions();
+  const streakWeeks = computeWeeklyStreak();
+  const met = thisWeek >= goal;
+  box.innerHTML = `
+    <div class="streak-banner">
+      <div class="left">
+        <span class="flame">${streakWeeks > 0 ? "🔥" : "💪"}</span>
+        <div>
+          <div class="count">${streakWeeks > 0 ? `<span class="num">${streakWeeks}</span> 週連続達成` : "コツコツいこう"}</div>
+          <div class="label">週${goal}回目標</div>
+        </div>
+      </div>
+      <div class="week">今週<span class="big" style="color:${met ? "var(--success)" : "var(--text)"}">${thisWeek} / ${goal}</span>${met ? " ✓" : ""}</div>
+    </div>`;
+}
+
+function renderRecordFilterBar() {
+  const bar = document.getElementById("record-filter-bar");
+  if (!bar) return;
+  if (state.workouts.length === 0) {
+    bar.innerHTML = "";
+    return;
+  }
+  const exNames = [...new Set(state.workouts.map(w => w.exercise))].sort();
+  const memoCount = state.workouts.filter(w => w.memo && w.memo.trim()).length;
+  const isActive = recordFilter.exercise || recordFilter.memoOnly;
+  bar.innerHTML = `
+    <div class="filter-bar">
+      <select onchange="setRecordFilter('exercise', this.value)" aria-label="種目で絞り込み">
+        <option value="">すべての種目</option>
+        ${exNames.map(n => `<option value="${escapeHtml(n)}" ${recordFilter.exercise === n ? "selected" : ""}>${escapeHtml(n)}</option>`).join("")}
+      </select>
+      ${memoCount > 0 ? `<button class="chip ${recordFilter.memoOnly ? "active" : ""}" onclick="setRecordFilter('memoOnly', ${!recordFilter.memoOnly})">📝 メモあり (${memoCount})</button>` : ""}
+      ${isActive ? `<button class="clear" onclick="clearRecordFilter()">クリア</button>` : ""}
+    </div>`;
+}
+
+function deleteWorkout(id) {
+  const removed = state.workouts.find(w => w.id === id);
+  if (!removed) return;
+  state.workouts = state.workouts.filter(w => w.id !== id);
+  saveState();
+  renderRecordTab();
+  renderSampleNotice();
+  showUndo("記録を削除しました", () => { state.workouts.push(removed); });
+}
+
+// ========== Weight ==========
+let weightChart = null;
+function saveBodyWeight() {
+  const date = document.getElementById("bw-date").value;
+  const weight = parseFloat(document.getElementById("bw-weight").value);
+  if (!date || isNaN(weight) || weight <= 0) { alert("日付と体重を入力してください"); return; }
+  const idx = state.weights.findIndex(w => w.date === date);
+  if (idx >= 0) {
+    const oldW = state.weights[idx].weight;
+    if (oldW === weight) {
+      // No change
+    } else if (!confirm(`${date} の体重 ${oldW}kg を ${weight}kg に更新しますか?`)) {
+      return;
+    }
+    state.weights[idx].weight = weight;
+  } else {
+    state.weights.push({ id: uuid(), date, weight });
+  }
+  saveState();
+  document.getElementById("bw-weight").value = "";
+  renderWeightTab();
+}
+
+function deleteWeight(id) {
+  const removed = state.weights.find(w => w.id === id);
+  if (!removed) return;
+  state.weights = state.weights.filter(w => w.id !== id);
+  saveState();
+  renderWeightTab();
+  renderSampleNotice();
+  showUndo("体重記録を削除しました", () => { state.weights.push(removed); });
+}
+
+function renderWeightTab() {
+  const sorted = [...state.weights].sort((a, b) => a.date.localeCompare(b.date));
+  if (weightChart) { weightChart.destroy(); weightChart = null; }
+  const emptyEl = document.getElementById("weight-empty");
+  const canvas = document.getElementById("weightChart");
+  if (sorted.length === 0) {
+    emptyEl.style.display = "block";
+    canvas.style.display = "none";
+  } else {
+    emptyEl.style.display = "none";
+    canvas.style.display = "block";
+    weightChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: sorted.map(w => w.date),
+        datasets: [{
+          label: "体重(kg)",
+          data: sorted.map(w => w.weight),
+          borderColor: getCssVar("--primary"),
+          backgroundColor: "transparent",
+          tension: 0.25,
+          pointRadius: 3
+        }]
+      },
+      options: chartBaseOptions()
+    });
+  }
+  const headerEl = document.getElementById("weight-list-header");
+  const listEl = document.getElementById("weight-list");
+  const sel = selectionState.weights;
+  const reversed = [...sorted].reverse();
+  const LIMIT = 20;
+  const visible = (sel.showAllManual || sel.showAllForSelection) ? reversed : reversed.slice(0, LIMIT);
+
+  if (sorted.length === 0) {
+    headerEl.innerHTML = `<div class="weight-list-header"><h3>記録一覧</h3></div>`;
+    listEl.innerHTML = '<div class="empty">記録なし</div>';
+    return;
+  }
+
+  if (sel.active) {
+    const n = sel.selected.size;
+    const allSelected = n === sorted.length && n > 0;
+    headerEl.innerHTML = `
+      <div class="weight-list-header">
+        <h3 style="color:var(--primary);text-transform:none;letter-spacing:0;font-size:var(--t-sh)">${n > 0 ? `${n}件選択` : "項目を選択"}</h3>
+        <span class="actions">
+          <button class="plain" onclick="${allSelected ? "clearWeightsSelection()" : "selectAllWeights()"}">${allSelected ? "解除" : "全て"}</button>
+          ${n > 0 ? `<button class="plain del" onclick="deleteSelectedWeights()">削除 (${n})</button>` : ""}
+          <button class="plain strong" onclick="exitWeightsSelection()">完了</button>
+        </span>
+      </div>`;
+  } else {
+    headerEl.innerHTML = `
+      <div class="weight-list-header">
+        <h3>記録一覧 (全${sorted.length}件)</h3>
+        <button class="plain strong" onclick="enterWeightsSelection()">選択</button>
+      </div>`;
+  }
+
+  const itemsHTML = visible.map(w => {
+    if (sel.active) {
+      const isSel = sel.selected.has(w.id);
+      return `<div class="record-item in-selection ${isSel ? "selected" : ""}" onclick="toggleWeightSelection('${w.id}')">
+        <div class="select-circle ${isSel ? "selected" : ""}"></div>
+        <div class="content">
+          <div class="meta">${w.date}</div>
+          <div class="detail">${w.weight} kg</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="record-item"><div class="meta"><span>${w.date}</span><span class="meta-actions"><button class="icon-btn" onclick="editWeight('${w.id}')" aria-label="編集">編集</button><button class="icon-btn danger" onclick="deleteWeight('${w.id}')" aria-label="削除">削除</button></span></div><div class="detail">${w.weight} kg</div></div>`;
+  }).join("");
+
+  let moreHTML = "";
+  if (!sel.active && sorted.length > LIMIT) {
+    moreHTML = sel.showAllManual
+      ? `<button class="plain block" onclick="toggleShowAllWeights()">少なく表示</button>`
+      : `<button class="plain block" onclick="toggleShowAllWeights()">もっと見る (残り ${sorted.length - LIMIT} 件)</button>`;
+  }
+
+  listEl.innerHTML = itemsHTML + moreHTML;
+}
+
+function chartBaseOptions() {
+  const text = getCssVar("--text-muted");
+  const border = getCssVar("--border");
+  return {
+    responsive: true,
+    maintainAspectRatio: true,
+    plugins: { legend: { labels: { color: text, font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: text, font: { size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 6 }, grid: { color: border } },
+      y: { ticks: { color: text, font: { size: 10 } }, grid: { color: border }, beginAtZero: false }
+    }
+  };
+}
+
+// ========== Analysis ==========
+let volumeChart = null;
+let exerciseChart = null;
+
+function renderAnalysisTab() {
+  // Empty banner if no data
+  const banner = document.getElementById("analysis-empty-banner");
+  if (state.workouts.length === 0) {
+    banner.innerHTML = `<div class="card" style="text-align:center;border:2px dashed var(--border);background:transparent">
+      <h2 style="margin-bottom:8px">まずデータを入れてみよう</h2>
+      <p class="muted" style="margin-bottom:12px">記録がまだないので、グラフはすべて空です。</p>
+      <button onclick="loadSampleData()">🧪 サンプルデータで試す</button>
+    </div>`;
+  } else {
+    banner.innerHTML = "";
+  }
+
+  renderProfileStats();
+  renderCategoryLast();
+  renderHeatmap();
+  renderVolumeChart();
+  renderBalanceDiagnosis();
+  renderGrowthRanking();
+  populateAnalyzeExercise();
+  renderExerciseAnalysis();
+  renderPRList();
+  setupAnalysisObserver();
+}
+
+function renderProfileStats() {
+  const box = document.getElementById("profile-stats");
+  const latestBW = [...state.weights].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const bw = latestBW ? latestBW.weight : null;
+  const items = [];
+  const ageVal = getAge();
+  items.push(`<div class="stat-box"><div class="label">年齢</div><div class="value">${ageVal != null ? ageVal + "歳" : "—"}</div></div>`);
+  items.push(`<div class="stat-box"><div class="label">身長</div><div class="value">${state.settings.height != null ? state.settings.height + "cm" : "—"}</div></div>`);
+  items.push(`<div class="stat-box"><div class="label">体重</div><div class="value">${bw != null ? bw + "kg" : "—"}</div></div>`);
+  if (state.settings.height && bw) {
+    const h = state.settings.height / 100;
+    const bmi = (bw / (h * h)).toFixed(1);
+    items.push(`<div class="stat-box"><div class="label">BMI</div><div class="value">${bmi}</div></div>`);
+  } else {
+    items.push(`<div class="stat-box"><div class="label">BMI</div><div class="value">—</div></div>`);
+  }
+  box.innerHTML = items.join("");
+
+  const strengthBox = document.getElementById("strength-list");
+  if (bw) {
+    const allEx = [...new Set(state.workouts.map(w => w.exercise))];
+    const ratios = [];
+    for (const ex of allEx) {
+      const pr = getPR(ex);
+      if (pr) ratios.push({ exercise: ex, ratio: pr.oneRM / bw, oneRM: pr.oneRM });
+    }
+    ratios.sort((a, b) => b.ratio - a.ratio);
+    if (ratios.length > 0) {
+      strengthBox.innerHTML = '<div class="section-title" style="margin-top:8px">体重あたりの強さ</div>' +
+        ratios.slice(0, 5).map(r =>
+          `<div class="record-item" style="background:var(--surface-2);padding:10px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span>${escapeHtml(r.exercise)}</span><b>${r.ratio.toFixed(2)}×</b></div><div class="muted" style="font-size:11px">1RM ${r.oneRM.toFixed(1)}kg ÷ 体重 ${bw}kg</div></div>`
+        ).join("");
+    } else {
+      strengthBox.innerHTML = '<div class="muted" style="margin-top:8px">種目の記録がまだありません</div>';
+    }
+  } else {
+    strengthBox.innerHTML = '<div class="muted" style="margin-top:8px">体重を記録すると「体重あたりの強さ」が算出されます</div>';
+  }
+}
+
+function renderCategoryLast() {
+  const box = document.getElementById("category-last");
+  const todayStr = today();
+  const rows = CATEGORIES.map(cat => {
+    const last = state.workouts.filter(w => w.category === cat).sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (!last) return { cat, date: null, days: null };
+    return { cat, date: last.date, days: daysBetween(last.date, todayStr) };
+  });
+  box.innerHTML = '<div class="stat-grid">' + rows.map(r => {
+    const color = r.days == null ? "var(--text-muted)" : r.days >= 10 ? "var(--warning)" : r.days >= 5 ? "var(--text)" : "var(--success)";
+    return `<div class="stat-box"><div class="label">${r.cat}</div><div class="value" style="color:${color}">${r.date ? r.days + "日前" : "—"}</div></div>`;
+  }).join("") + "</div>";
+}
+
+function renderHeatmap() {
+  const container = document.getElementById("heatmap");
+  const todayD = new Date();
+  todayD.setHours(0, 0, 0, 0);
+  const todayDow = (todayD.getDay() + 6) % 7; // Mon=0
+  // 13 weeks: end at the end of this week (Sunday), start 13 weeks before that
+  const totalCells = 13 * 7;
+  const startDate = new Date(todayD);
+  startDate.setDate(startDate.getDate() - (totalCells - 1 - (6 - todayDow)));
+
+  const dailyVol = {};
+  state.workouts.forEach(w => {
+    const v = totalVolume(w);
+    dailyVol[w.date] = (dailyVol[w.date] || 0) + v;
+  });
+  const vols = Object.values(dailyVol);
+  const max = vols.length > 0 ? Math.max(...vols) : 0;
+
+  const cells = [];
+  for (let i = 0; i < totalCells; i++) {
+    const d = new Date(startDate);
+    d.setDate(d.getDate() + i);
+    if (d > todayD) {
+      cells.push(`<div class="heatmap-cell future"></div>`);
+      continue;
+    }
+    const dateStr = localDateStr(d);
+    const vol = dailyVol[dateStr] || 0;
+    if (vol === 0) {
+      cells.push(`<div class="heatmap-cell" title="${dateStr}: 休"></div>`);
+    } else {
+      const ratio = max > 0 ? vol / max : 0;
+      let alpha;
+      if (ratio <= 0.25) alpha = 0.25;
+      else if (ratio <= 0.5) alpha = 0.5;
+      else if (ratio <= 0.75) alpha = 0.75;
+      else alpha = 1;
+      cells.push(`<div class="heatmap-cell" style="background:rgba(var(--primary-rgb),${alpha})" title="${dateStr}: ${fmtKg(vol)}"></div>`);
+    }
+  }
+  container.innerHTML = cells.join("");
+}
+
+function renderVolumeChart() {
+  if (volumeChart) { volumeChart.destroy(); volumeChart = null; }
+  const emptyEl = document.getElementById("volume-empty");
+  const canvas = document.getElementById("volumeChart");
+  if (state.workouts.length === 0) {
+    emptyEl.style.display = "block";
+    canvas.style.display = "none";
+    return;
+  }
+  emptyEl.style.display = "none";
+  canvas.style.display = "block";
+
+  const weekMap = {};
+  state.workouts.forEach(w => {
+    const wk = weekKey(w.date);
+    weekMap[wk] = weekMap[wk] || {};
+    weekMap[wk][w.category] = (weekMap[wk][w.category] || 0) + totalVolume(w);
+  });
+  const weeks = Object.keys(weekMap).sort();
+  const last12 = weeks.slice(-12);
+  const datasets = CATEGORIES.map((cat, i) => ({
+    label: cat,
+    data: last12.map(w => weekMap[w][cat] || 0),
+    backgroundColor: CAT_COLORS[i]
+  }));
+  const opts = chartBaseOptions();
+  opts.scales.x.stacked = true;
+  opts.scales.y.stacked = true;
+  opts.scales.y.beginAtZero = true;
+  opts.scales.y.ticks.callback = function(v) { return v >= 1000 ? (v / 1000) + "t" : v + ""; };
+  opts.plugins.tooltip = { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtKg(ctx.parsed.y)}` } };
+  volumeChart = new Chart(canvas, { type: "bar", data: { labels: last12, datasets }, options: opts });
+}
+
+function renderGrowthRanking() {
+  const box = document.getElementById("growth-ranking");
+  const days = 90;
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = localDateStr(cutoff);
+
+  const exs = [...new Set(state.workouts.map(w => w.exercise))];
+  const growths = exs.map(ex => {
+    if (isTimeExercise(ex)) return null; // skip time-based for now
+    const records = state.workouts
+      .filter(w => w.exercise === ex && w.date >= cutoffStr)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    if (records.length < 3) return null;
+    const first = getBest1RM(records[0]);
+    const last = getBest1RM(records[records.length - 1]);
+    if (first === 0) return null;
+    return { ex, growth: ((last - first) / first) * 100, samples: records.length };
+  }).filter(x => x);
+
+  if (growths.length === 0) {
+    box.innerHTML = '<div class="muted">3ヶ月以上記録した種目が必要です (各種目 3 記録以上)</div>';
+    return;
+  }
+
+  growths.sort((a, b) => b.growth - a.growth);
+  const top = growths.slice(0, 3);
+  const medals = ["🥇", "🥈", "🥉"];
+
+  let html = `<div class="growth-section">
+    <h3>🔥 伸びている</h3>
+    ${top.map((g, i) => `<div class="growth-row">
+      <span class="medal">${medals[i]}</span>
+      <span class="name">${escapeHtml(g.ex)}</span>
+      <span class="pct" style="color:${g.growth >= 0 ? "var(--success)" : "var(--danger)"}">${g.growth >= 0 ? "+" : ""}${g.growth.toFixed(1)}%</span>
+    </div>`).join("")}
+  </div>`;
+
+  if (growths.length >= 4) {
+    const worst = growths.slice(-3).reverse();
+    html += `<div class="growth-section" style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--separator)">
+      <h3>🐢 停滞気味</h3>
+      ${worst.map(g => `<div class="growth-row">
+        <span class="medal">·</span>
+        <span class="name">${escapeHtml(g.ex)}</span>
+        <span class="pct" style="color:${g.growth >= 0 ? "var(--text-muted)" : "var(--danger)"}">${g.growth >= 0 ? "+" : ""}${g.growth.toFixed(1)}%</span>
+      </div>`).join("")}
+    </div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function renderBalanceDiagnosis() {
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28);
+  const cutoffStr = localDateStr(cutoff);
+  const recent = state.workouts.filter(w => w.date >= cutoffStr);
+
+  const totals = {};
+  CATEGORIES.forEach(c => totals[c] = 0);
+  recent.forEach(w => {
+    if (totals[w.category] !== undefined) {
+      totals[w.category] += totalVolume(w);
+    }
+  });
+  const sum = Object.values(totals).reduce((a, b) => a + b, 0);
+  const box = document.getElementById("balance-diagnosis");
+  if (sum === 0) {
+    box.innerHTML = '<div class="muted">過去4週間の記録がありません</div>';
+    return;
+  }
+
+  // Compute ratios
+  const push = (totals["胸"] || 0) + (totals["肩"] || 0);
+  const pull = totals["背中"] || 0;
+  const upper = push + pull + (totals["腕"] || 0);
+  const lower = totals["脚"] || 0;
+  const big = (totals["胸"] || 0) + (totals["背中"] || 0) + (totals["脚"] || 0);
+  const small = (totals["肩"] || 0) + (totals["腕"] || 0) + (totals["体幹"] || 0);
+
+  function ratioRow(labelA, labelB, vA, vB, idealLow, idealHigh, suggestionLeft, suggestionRight) {
+    const total = vA + vB;
+    if (total === 0) return "";
+    const pctA = (vA / total) * 100;
+    const pctB = 100 - pctA;
+    let verdictClass = "ok", verdictText = "✅ 良いバランス";
+    if (pctA > idealHigh) { verdictClass = "warn"; verdictText = `⚠️ ${suggestionLeft}`; }
+    else if (pctA < idealLow) { verdictClass = "warn"; verdictText = `⚠️ ${suggestionRight}`; }
+    return `<div class="balance-row">
+      <div class="balance-head">
+        <span><b>${labelA}</b> / ${labelB}</span>
+        <span class="ratio">${pctA.toFixed(0)} : ${pctB.toFixed(0)}</span>
+      </div>
+      <div class="stacked-bar">
+        <div style="width:${pctA}%;background:${CAT_COLORS[0]}" title="${labelA} ${pctA.toFixed(0)}%"></div>
+        <div style="width:${pctB}%;background:${CAT_COLORS[1]}" title="${labelB} ${pctB.toFixed(0)}%"></div>
+      </div>
+      <div class="balance-verdict ${verdictClass}">${verdictText}</div>
+    </div>`;
+  }
+
+  let html = "";
+  if (push + pull > 0) {
+    html += ratioRow(
+      "押す系 (胸+肩)", "引く系 (背中)",
+      push, pull,
+      40, 70,
+      "引く系 (背中) を増やそう。プッシュ過多は肩前部のオーバーユース原因",
+      "押す系 (胸+肩) を増やそう"
+    );
+  }
+  if (upper + lower > 0) {
+    html += ratioRow(
+      "上半身", "下半身",
+      upper, lower,
+      50, 75,
+      "下半身 (脚) を増やそう。身体最大の筋群、週1〜2回確保したい",
+      "上半身を増やそう"
+    );
+  }
+  if (big + small > 0) {
+    html += ratioRow(
+      "大筋群 (胸/背中/脚)", "小筋群 (肩/腕/体幹)",
+      big, small,
+      55, 85,
+      "小筋群 (肩/腕/体幹) を補強",
+      "大筋群中心のメニューに"
+    );
+  }
+
+  // Category breakdown
+  const segments = CATEGORIES.map((c, i) => ({
+    cat: c, color: CAT_COLORS[i],
+    pct: (totals[c] / sum) * 100, vol: totals[c]
+  })).filter(s => s.pct > 0);
+
+  const bar = `<div class="stacked-bar">${segments.map(s =>
+    `<div style="width:${s.pct}%;background:${s.color}" title="${s.cat}: ${s.pct.toFixed(0)}%">${s.pct >= 10 ? s.pct.toFixed(0) + "%" : ""}</div>`
+  ).join("")}</div>`;
+  const legend = `<div class="legend">${segments.map(s =>
+    `<div class="item"><span class="swatch" style="background:${s.color}"></span>${s.cat} ${s.pct.toFixed(0)}%</div>`
+  ).join("")}</div>`;
+
+  html += `<div style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--separator)">
+    <div class="muted" style="font-size:12px;margin-bottom:6px">カテゴリ別内訳</div>${bar}${legend}
+  </div>`;
+
+  box.innerHTML = html;
+}
+
+function populateAnalyzeExercise() {
+  const sel = document.getElementById("analyze-exercise");
+  const cur = sel.value;
+  const exs = [...new Set(state.workouts.map(w => w.exercise))].sort();
+  sel.innerHTML = '<option value="">種目を選択</option>' + exs.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join("");
+  if (exs.includes(cur)) sel.value = cur;
+  sel.onchange = renderExerciseAnalysis;
+  document.getElementById("analyze-metric").onchange = renderExerciseAnalysis;
+}
+
+function renderExerciseAnalysis() {
+  if (exerciseChart) { exerciseChart.destroy(); exerciseChart = null; }
+  const ex = document.getElementById("analyze-exercise").value;
+  const metric = document.getElementById("analyze-metric").value;
+  const growthBox = document.getElementById("growth-stats");
+  const goalBox = document.getElementById("goal-display");
+  if (!ex) { growthBox.innerHTML = ""; goalBox.innerHTML = ""; return; }
+  const records = state.workouts.filter(w => w.exercise === ex).sort((a, b) => a.date.localeCompare(b.date));
+  if (records.length === 0) { growthBox.innerHTML = ""; goalBox.innerHTML = ""; return; }
+
+  const labels = records.map(r => r.date);
+  const data = records.map(r => metric === "oneRM" ? getBest1RM(r) : totalVolume(r));
+  const ctx = document.getElementById("exerciseChart");
+  exerciseChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: metric === "oneRM" ? "推定1RM(kg)" : "総挙上量(kg)",
+        data,
+        borderColor: getCssVar("--primary"),
+        backgroundColor: "transparent",
+        tension: 0.25,
+        pointRadius: 3
+      }]
+    },
+    options: chartBaseOptions()
+  });
+
+  // Goal display
+  renderGoalDisplay(ex);
+
+  // Growth rates
+  const periods = [
+    { label: "1ヶ月", days: 30 },
+    { label: "3ヶ月", days: 90 },
+    { label: "6ヶ月", days: 180 }
+  ];
+  const growths = periods.map(p => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - p.days);
+    const cutoffStr = localDateStr(cutoff);
+    const period = records.filter(r => r.date >= cutoffStr);
+    if (period.length < 2) return { ...p, growth: null };
+    const firstRM = getBest1RM(period[0]);
+    const lastRM = getBest1RM(period[period.length - 1]);
+    if (firstRM === 0) return { ...p, growth: null };
+    return { ...p, growth: ((lastRM - firstRM) / firstRM) * 100 };
+  });
+  growthBox.innerHTML = '<div class="stat-grid">' + growths.map(g => {
+    const color = g.growth == null ? "var(--text-muted)" : g.growth >= 0 ? "var(--success)" : "var(--danger)";
+    const txt = g.growth == null ? "—" : (g.growth >= 0 ? "+" : "") + g.growth.toFixed(1) + "%";
+    return `<div class="stat-box"><div class="label">過去${g.label}</div><div class="value" style="color:${color}">${txt}</div></div>`;
+  }).join("") + "</div>";
+}
+
+function renderGoalDisplay(ex) {
+  const goal = state.settings.goals?.[ex];
+  const box = document.getElementById("goal-display");
+  if (!goal) {
+    box.innerHTML = `<button class="ghost small" onclick="setGoal()">🎯 目標を設定</button>`;
+    return;
+  }
+  const pr = getPR(ex);
+  const current = pr ? pr.oneRM : 0;
+  const pct = Math.min(100, (current / goal) * 100);
+  const achieved = current >= goal;
+  box.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <span style="font-size:13px">🎯 目標 ${goal}kg</span>
+      <span style="font-size:13px;font-weight:600;color:${achieved ? "var(--success)" : "var(--text)"}">${achieved ? "✓ 達成" : current.toFixed(1) + " / " + goal + "kg"}</span>
+    </div>
+    <div class="progress-bar ${achieved ? "complete" : ""}"><div class="fill" style="width:${pct}%"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+      <span class="muted" style="font-size:11px">${pct.toFixed(0)}% 達成</span>
+      <button class="secondary small" onclick="setGoal()">変更</button>
+    </div>
+  `;
+}
+
+function setGoal() {
+  const ex = document.getElementById("analyze-exercise").value;
+  if (!ex) { alert("先に種目を選択してください"); return; }
+  const current = state.settings.goals?.[ex] ?? "";
+  const input = prompt(`「${ex}」の目標推定1RM(kg)を入力 (削除する場合は空欄で OK):`, current);
+  if (input === null) return;
+  if (!state.settings.goals) state.settings.goals = {};
+  const trimmed = input.trim();
+  if (trimmed === "") {
+    delete state.settings.goals[ex];
+  } else {
+    const v = parseFloat(trimmed);
+    if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
+    state.settings.goals[ex] = v;
+  }
+  saveState();
+  renderGoalDisplay(ex);
+}
+
+function renderPRList() {
+  const box = document.getElementById("pr-list");
+  const exs = [...new Set(state.workouts.map(w => w.exercise))];
+  if (exs.length === 0) { box.innerHTML = '<div class="empty">記録なし</div>'; return; }
+  const prs = exs.map(ex => ({ ex, pr: getPR(ex) })).filter(x => x.pr);
+  // Sort: weight PRs by 1RM desc, time PRs grouped after
+  prs.sort((a, b) => {
+    if (!!a.pr.isTime !== !!b.pr.isTime) return a.pr.isTime ? 1 : -1;
+    return b.pr.oneRM - a.pr.oneRM;
+  });
+  box.innerHTML = prs.map(p => {
+    const detail = p.pr.isTime
+      ? `合計 ${Math.round(p.pr.oneRM)}秒 (最長セット ${p.pr.reps}秒)`
+      : `${p.pr.weight}kg × ${p.pr.reps}回 (推定1RM ${p.pr.oneRM.toFixed(1)}kg)`;
+    return `<div class="record-item"><div class="exercise">${escapeHtml(p.ex)} <span class="badge best-badge">ベスト</span></div><div class="detail">${detail}</div><div class="muted" style="font-size:12px;margin-top:2px">${p.pr.date}</div></div>`;
+  }).join("");
+}
+
+// ========== Report tab ==========
+function renderReportTab() {
+  const banner = document.getElementById("report-empty-banner");
+  if (state.workouts.length === 0 && !document.getElementById("report-output").innerHTML.trim()) {
+    banner.innerHTML = `<div class="card no-capture" style="text-align:center;border:2px dashed var(--border);background:transparent">
+      <p class="muted" style="margin-bottom:12px">記録がないと意味のあるレポートにならないよ</p>
+      <button onclick="loadSampleData()">🧪 サンプルデータで試す</button>
+    </div>`;
+  } else {
+    banner.innerHTML = "";
+  }
+}
+
+// ========== Settings ==========
+function renderSettingsTab() {
+  document.getElementById("set-height").value = state.settings.height ?? "";
+  const bdInput = document.getElementById("set-birthday");
+  bdInput.value = state.settings.birthday || "";
+  bdInput.max = today();
+  bdInput.onfocus = () => { bdInput.max = today(); };
+  bdInput.oninput = updateAgeDisplay;
+  updateAgeDisplay();
+  const setBar = document.getElementById("set-bar");
+  if (setBar) setBar.value = state.settings.barWeight ?? 20;
+  const setPlates = document.getElementById("set-plates");
+  if (setPlates) setPlates.value = (state.settings.plates || []).join(",");
+  const setWG = document.getElementById("set-weekly-goal");
+  if (setWG) setWG.value = state.settings.weeklyGoal ?? 3;
+  renderBackupReminder();
+  document.getElementById("set-theme").value = state.settings.themeMode || "system";
+  document.getElementById("set-theme").onchange = (e) => {
+    state.settings.themeMode = e.target.value;
+    applyTheme();
+    saveState();
+    redrawActiveCharts();
+  };
+
+  const box = document.getElementById("exercise-manage");
+  const byCat = {};
+  state.exercises.forEach(e => (byCat[e.category] = byCat[e.category] || []).push(e));
+  box.innerHTML = CATEGORIES.map(cat => {
+    const list = byCat[cat] || [];
+    return `<div style="margin-bottom:12px"><h3>${cat}</h3>${list.length === 0 ? '<span class="muted">なし</span>' : list.map(e => `<span class="exercise-pill">${escapeHtml(e.name)}${e.isTime ? '<span class="badge" style="font-size:10px;margin-left:6px;background:var(--primary-soft);color:var(--primary)">時間</span>' : ''}<span class="ren" onclick="renameExercise('${e.id}')" aria-label="名前変更">✎</span><span class="del" onclick="deleteExercise('${e.id}')" aria-label="削除">✕</span></span>`).join("")}</div>`;
+  }).join("");
+}
+
+function savePlateSettings() {
+  const bar = parseFloat(document.getElementById("set-bar").value);
+  const platesStr = document.getElementById("set-plates").value || "";
+  const plates = platesStr.split(",").map(s => parseFloat(s.trim())).filter(n => !isNaN(n) && n > 0);
+  if (isNaN(bar) || bar < 0) { alert("バー重量を確認してください"); return; }
+  if (plates.length === 0) { alert("プレートを1つ以上指定してください"); return; }
+  state.settings.barWeight = bar;
+  state.settings.plates = plates.sort((a, b) => b - a);
+  saveState();
+  alert("保存しました");
+}
+
+function saveProfile() {
+  const h = parseFloat(document.getElementById("set-height").value);
+  const bd = document.getElementById("set-birthday").value;
+  const wg = parseInt(document.getElementById("set-weekly-goal").value);
+  state.settings.height = isNaN(h) ? null : h;
+  if (bd) {
+    state.settings.birthday = bd;
+    state.settings.age = null;
+  } else {
+    state.settings.birthday = null;
+  }
+  if (!isNaN(wg) && wg >= 1 && wg <= 7) state.settings.weeklyGoal = wg;
+  saveState();
+  updateAgeDisplay();
+  alert("保存しました");
+}
+
+function updateAgeDisplay() {
+  const box = document.getElementById("age-display");
+  if (!box) return;
+  const bdInput = document.getElementById("set-birthday");
+  const bdVal = bdInput ? bdInput.value : state.settings.birthday;
+  let age = null;
+  if (bdVal) {
+    const bd = new Date(bdVal + "T00:00:00");
+    if (!isNaN(bd.getTime())) {
+      const now = new Date();
+      age = now.getFullYear() - bd.getFullYear();
+      const m = now.getMonth() - bd.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < bd.getDate())) age--;
+    }
+  } else if (state.settings.age != null) {
+    age = state.settings.age;
+    box.textContent = `現在の年齢: ${age}歳 (旧データ。生年月日を入れると自動同期します)`;
+    return;
+  }
+  if (age != null && age >= 0) {
+    box.textContent = `現在の年齢: ${age}歳 (誕生日から自動算出)`;
+  } else {
+    box.textContent = "";
+  }
+}
+
+function deleteExercise(id) {
+  if (!confirm("種目を削除しますか? (過去の記録は残ります)")) return;
+  state.exercises = state.exercises.filter(e => e.id !== id);
+  saveState();
+  renderSettingsTab();
+}
+
+function renameExercise(id) {
+  const ex = state.exercises.find(e => e.id === id);
+  if (!ex) return;
+  const newName = prompt(`「${ex.name}」の新しい名前:`, ex.name);
+  if (newName === null) return;
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === ex.name) return;
+  if (state.exercises.some(e => e.name === trimmed && e.category === ex.category && e.id !== id)) {
+    alert("同じカテゴリにその名前の種目がすでに存在します");
+    return;
+  }
+  const oldName = ex.name;
+  const recordCount = state.workouts.filter(w => w.exercise === oldName).length;
+  if (recordCount > 0 && !confirm(`「${oldName}」を「${trimmed}」に変更します。\n過去 ${recordCount}件 の記録と、設定済みの目標も新名へ引き継がれます。続行?`)) return;
+
+  // Rename: exercise definition, all workouts, and goals
+  ex.name = trimmed;
+  state.workouts.forEach(w => { if (w.exercise === oldName) w.exercise = trimmed; });
+  if (state.settings.goals && state.settings.goals[oldName] != null) {
+    state.settings.goals[trimmed] = state.settings.goals[oldName];
+    delete state.settings.goals[oldName];
+  }
+  saveState();
+  renderSettingsTab();
+}
+
+function applyTheme() {
+  const mode = state.settings.themeMode || "system";
+  let actual;
+  if (mode === "system") {
+    actual = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } else {
+    actual = mode;
+  }
+  document.documentElement.setAttribute("data-theme", actual);
+}
+
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+    if ((state.settings.themeMode || "system") === "system") {
+      applyTheme();
+      redrawActiveCharts();
+    }
+  });
+}
+
+function redrawActiveCharts() {
+  const active = document.querySelector(".tabs button.active");
+  if (!active) return;
+  const name = active.dataset.tab;
+  if (name === "weight") renderWeightTab();
+  if (name === "analysis") renderAnalysisTab();
+}
+
+function confirmReset() {
+  if (!confirm("本当に全データを削除しますか？元に戻せません。")) return;
+  if (!confirm("最終確認: すべて削除します。よろしいですか？")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = defaultState();
+  state.exercises = buildPresetExercises();
+  saveState();
+  location.reload();
+}
+
+// ========== Export / Import ==========
+function exportJSON() {
+  state.settings.lastExportAt = today();
+  saveState();
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  download(blob, `grow_backup_${today()}.json`);
+  // If the backup-reminder banner is visible (settings tab open), refresh it
+  renderBackupReminder();
+}
+
+function renderBackupReminder() {
+  const box = document.getElementById("backup-reminder");
+  if (!box) return;
+  // Show only if there's meaningful data and either never exported or last export > 30 days ago
+  const totalRecords = state.workouts.length + state.weights.length;
+  if (totalRecords < 10) { box.innerHTML = ""; return; }
+  const last = state.settings.lastExportAt;
+  const days = last ? daysBetween(last, today()) : 9999;
+  if (days < 30) { box.innerHTML = ""; return; }
+  const msg = last
+    ? `${days}日間バックアップしていません。`
+    : "まだバックアップしていません。";
+  box.innerHTML = `<div class="backup-reminder">⚠️ ${msg} データ消失に備えて月1のJSONエクスポートを推奨。</div>`;
+}
+
+function importJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.workouts || !Array.isArray(imported.workouts)) throw new Error("形式が不正です");
+      if (!confirm("現在のデータを上書きします。続行しますか?")) {
+        event.target.value = "";
+        return;
+      }
+      const def = defaultState();
+      state = {
+        workouts: imported.workouts,
+        weights: Array.isArray(imported.weights) ? imported.weights : [],
+        exercises: Array.isArray(imported.exercises) ? imported.exercises : [],
+        settings: { ...def.settings, ...(imported.settings || {}) }
+      };
+      if (!state.settings.goals) state.settings.goals = {};
+      saveState();
+      applyTheme();
+      location.reload();
+    } catch (err) {
+      alert("読み込みに失敗しました: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ========== Mask Dialog ==========
+function showMaskDialog(action) {
+  const root = document.getElementById("modal-root");
+  const title = action === "csv" ? "CSV出力" : "レポート生成";
+  const hasSample = hasSampleData();
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>${title} — 出力項目</h2>
+      <p class="muted" style="margin-bottom:10px">挙上記録・グラフは常に含まれます。下記のうち、含める項目をチェックしてください。</p>
+      <label class="checkbox-row"><input type="checkbox" id="mask-bw" checked> 体重</label>
+      <label class="checkbox-row"><input type="checkbox" id="mask-height" checked> 身長</label>
+      <label class="checkbox-row"><input type="checkbox" id="mask-age" checked> 年齢</label>
+      <label class="checkbox-row"><input type="checkbox" id="mask-memo" checked> メモ</label>
+      ${hasSample ? `<label class="checkbox-row" style="border-top:1px solid var(--separator);margin-top:8px;padding-top:12px"><input type="checkbox" id="mask-sample"> サンプルデータを含める <span class="muted" style="font-size:11px;margin-left:auto">(共有時は通常 OFF)</span></label>` : ""}
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">キャンセル</button>
+        <button onclick="proceedMask('${action}')">続行</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function proceedMask(action) {
+  const sampleCheckbox = document.getElementById("mask-sample");
+  const mask = {
+    bodyWeight: document.getElementById("mask-bw").checked,
+    height: document.getElementById("mask-height").checked,
+    age: document.getElementById("mask-age").checked,
+    memo: document.getElementById("mask-memo").checked,
+    includeSample: sampleCheckbox ? sampleCheckbox.checked : true
+  };
+  closeModal();
+  if (action === "csv") exportCSV(mask);
+  else if (action === "report") generateReport(mask);
+}
+
+function filterSampleIfNeeded(records, includeSample) {
+  return includeSample ? records : records.filter(r => !r.isSample);
+}
+
+// ========== CSV Export ==========
+function exportCSV(mask) {
+  // Per-set CSV: one row per individual set
+  const headers = ["日付", "カテゴリ", "種目", "セット番号", "重量(kg)", "レップ", "推定1RM(kg)"];
+  if (mask.memo) headers.push("メモ");
+
+  const workouts = filterSampleIfNeeded(state.workouts, mask.includeSample);
+  const rows = [];
+  [...workouts].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)).forEach(w => {
+    const sets = getSets(w);
+    sets.forEach((s, i) => {
+      const r = [w.date, w.category, w.exercise, i + 1, s.weight, s.reps, epley1RM(s.weight, s.reps).toFixed(2)];
+      // Memo only on first set row to avoid duplication
+      if (mask.memo) r.push(i === 0 ? (w.memo || "") : "");
+      rows.push(r);
+    });
+  });
+
+  let csv = headers.map(csvEscape).join(",") + "\n";
+  rows.forEach(r => { csv += r.map(csvEscape).join(",") + "\n"; });
+
+  if (mask.bodyWeight) {
+    const weights = filterSampleIfNeeded(state.weights, mask.includeSample);
+    if (weights.length > 0) {
+      csv += "\n体重記録\n日付,体重(kg)\n";
+      [...weights].sort((a, b) => a.date.localeCompare(b.date)).forEach(w => { csv += `${w.date},${w.weight}\n`; });
+    }
+  }
+
+  const profileLines = [];
+  const ageVal = getAge();
+  if (mask.age && ageVal != null) profileLines.push(`年齢,${ageVal}`);
+  if (mask.height && state.settings.height != null) profileLines.push(`身長(cm),${state.settings.height}`);
+  if (profileLines.length > 0) csv += "\nプロフィール\n" + profileLines.join("\n") + "\n";
+
+  const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  download(blob, `grow_records_${today()}.csv`);
+}
+
+function csvEscape(v) {
+  const s = String(v ?? "");
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// ========== Report ==========
+let reportCharts = [];
+function generateReport(mask) {
+  reportCharts.forEach(c => c.destroy());
+  reportCharts = [];
+  document.getElementById("report-empty-banner").innerHTML = "";
+
+  const days = parseInt(document.getElementById("report-period").value);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = localDateStr(cutoff);
+  const allWorkouts = filterSampleIfNeeded(state.workouts, mask.includeSample);
+  const allWeights = filterSampleIfNeeded(state.weights, mask.includeSample);
+  const periodWorkouts = allWorkouts.filter(w => w.date >= cutoffStr);
+
+  const profileParts = [];
+  const ageVal = getAge();
+  if (mask.age && ageVal != null) profileParts.push(`${ageVal}歳`);
+  if (mask.height && state.settings.height != null) profileParts.push(`身長${state.settings.height}cm`);
+  let bw = null;
+  if (mask.bodyWeight) {
+    const latest = [...allWeights].sort((a, b) => b.date.localeCompare(a.date))[0];
+    if (latest) { bw = latest.weight; profileParts.push(`体重${latest.weight}kg`); }
+  }
+
+  const out = document.getElementById("report-output");
+  const exs = [...new Set(allWorkouts.map(w => w.exercise))];
+  const prs = exs.map(ex => ({ ex, pr: getPRFrom(allWorkouts, ex) })).filter(x => x.pr).sort((a, b) => b.pr.oneRM - a.pr.oneRM);
+
+  const growths = exs.map(ex => {
+    const records = allWorkouts.filter(w => w.exercise === ex && w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
+    if (records.length < 2) return null;
+    const first = getBest1RM(records[0]);
+    const last = getBest1RM(records[records.length - 1]);
+    if (first === 0) return null;
+    return { ex, growth: ((last - first) / first) * 100, samples: records.length };
+  }).filter(x => x).sort((a, b) => b.growth - a.growth);
+
+  const totalSessions = new Set(periodWorkouts.map(w => w.date)).size;
+  const totalVolume = periodWorkouts.reduce((s, w) => s + totalVolume(w), 0);
+
+  let strengthHTML = "";
+  if (bw && prs.length > 0) {
+    const top = prs.slice(0, 3).map(p => `${escapeHtml(p.ex)}: ${(p.pr.oneRM / bw).toFixed(2)}×体重`);
+    strengthHTML = `<div class="muted" style="margin-top:6px;font-size:12px">${top.join(" / ")}</div>`;
+  }
+
+  const memos = mask.memo ? periodWorkouts.filter(w => w.memo).sort((a, b) => b.date.localeCompare(a.date)) : [];
+
+  out.innerHTML = `
+    <div style="text-align:right;margin-bottom:8px" class="no-capture">
+      <button class="ghost small" onclick="saveReportAsPDF()">📄 PDFで保存</button>
+    </div>
+    <div class="card">
+      <div class="report-header">
+        <h1>💪 トレーニング・サマリー</h1>
+        <div class="date-range">${cutoffStr} 〜 ${today()}</div>
+        ${profileParts.length > 0 ? `<div class="muted" style="margin-top:6px">${profileParts.join(" / ")}</div>` : ""}
+        ${strengthHTML}
+        <div class="app-mark">— GROW —</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="label">セッション数</div><div class="value">${totalSessions}</div></div>
+        <div class="stat-box"><div class="label">総ボリューム</div><div class="value">${(totalVolume / 1000).toFixed(1)}t</div></div>
+        <div class="stat-box"><div class="label">記録数</div><div class="value">${periodWorkouts.length}</div></div>
+        <div class="stat-box"><div class="label">種目数</div><div class="value">${new Set(periodWorkouts.map(w => w.exercise)).size}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📈 期間内の伸び率</h2>
+      ${growths.length === 0 ? '<div class="muted">伸び率を算出するにはデータが不足しています</div>' : growths.map(g => `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div style="display:flex;justify-content:space-between;align-items:center"><span class="exercise" style="font-size:14px">${escapeHtml(g.ex)}</span><b style="color:${g.growth >= 0 ? "var(--success)" : "var(--danger)"};font-size:16px">${g.growth >= 0 ? "+" : ""}${g.growth.toFixed(1)}%</b></div></div>`).join("")}
+    </div>
+
+    <div class="card">
+      <h2>🏆 自己ベスト</h2>
+      ${prs.length === 0 ? '<div class="muted">記録なし</div>' : prs.map(p => `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div class="exercise" style="font-size:14px">${escapeHtml(p.ex)}</div><div class="detail">${p.pr.weight}kg × ${p.pr.reps}回 <span class="muted" style="font-size:12px">(1RM ${p.pr.oneRM.toFixed(1)}kg / ${p.pr.date})</span></div></div>`).join("")}
+    </div>
+
+    <div class="card">
+      <h2>📊 週ボリューム推移</h2>
+      ${periodWorkouts.length === 0 ? '<div class="muted">データがありません</div>' : '<canvas id="report-volume"></canvas>'}
+    </div>
+
+    ${mask.bodyWeight && allWeights.filter(w => w.date >= cutoffStr).length > 0 ? `<div class="card"><h2>⚖️ 体重推移</h2><canvas id="report-weight"></canvas></div>` : ""}
+
+    <div class="card">
+      <h2>📈 主要種目の推移</h2>
+      <div id="report-exercise-charts"></div>
+    </div>
+
+    ${memos.length > 0 ? `<div class="card"><h2>📝 メモ</h2>${memos.slice(0, 10).map(m => `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div class="muted" style="font-size:11px">${m.date} / ${escapeHtml(m.exercise)}</div><div style="font-size:13px;margin-top:2px">${escapeHtml(m.memo)}</div></div>`).join("")}</div>` : ""}
+  `;
+
+  if (periodWorkouts.length > 0) {
+    const weekMap = {};
+    periodWorkouts.forEach(w => {
+      const wk = weekKey(w.date);
+      weekMap[wk] = weekMap[wk] || {};
+      weekMap[wk][w.category] = (weekMap[wk][w.category] || 0) + totalVolume(w);
+    });
+    const weeks = Object.keys(weekMap).sort();
+    const datasets = CATEGORIES.map((cat, i) => ({
+      label: cat,
+      data: weeks.map(w => weekMap[w][cat] || 0),
+      backgroundColor: CAT_COLORS[i]
+    }));
+    const opts = chartBaseOptions();
+    opts.scales.x.stacked = true;
+    opts.scales.y.stacked = true;
+    opts.scales.y.beginAtZero = true;
+    opts.scales.y.ticks.callback = function(v) { return v >= 1000 ? (v / 1000) + "t" : v + ""; };
+    const volEl = document.getElementById("report-volume");
+    if (volEl) reportCharts.push(new Chart(volEl, { type: "bar", data: { labels: weeks, datasets }, options: opts }));
+  }
+
+  if (mask.bodyWeight) {
+    const ws = [...allWeights].filter(w => w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
+    const el = document.getElementById("report-weight");
+    if (el && ws.length > 0) {
+      reportCharts.push(new Chart(el, {
+        type: "line",
+        data: {
+          labels: ws.map(w => w.date),
+          datasets: [{ label: "体重(kg)", data: ws.map(w => w.weight), borderColor: getCssVar("--primary"), backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
+        },
+        options: chartBaseOptions()
+      }));
+    }
+  }
+
+  const exCounts = {};
+  periodWorkouts.forEach(w => { exCounts[w.exercise] = (exCounts[w.exercise] || 0) + 1; });
+  const topEx = Object.entries(exCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
+  const exContainer = document.getElementById("report-exercise-charts");
+  if (topEx.length === 0) {
+    exContainer.innerHTML = '<div class="muted">データがありません</div>';
+  } else {
+    topEx.forEach((ex, idx) => {
+      const div = document.createElement("div");
+      div.style.marginBottom = "16px";
+      div.innerHTML = `<h3 style="margin-bottom:6px;color:var(--text)">${escapeHtml(ex)}</h3><canvas id="rep-ex-${idx}"></canvas>`;
+      exContainer.appendChild(div);
+      const records = allWorkouts.filter(w => w.exercise === ex && w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
+      if (records.length > 0) {
+        reportCharts.push(new Chart(document.getElementById(`rep-ex-${idx}`), {
+          type: "line",
+          data: {
+            labels: records.map(r => r.date),
+            datasets: [{ label: "推定1RM(kg)", data: records.map(r => getBest1RM(r)), borderColor: getCssVar("--primary"), backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
+          },
+          options: chartBaseOptions()
+        }));
+      }
+    });
+  }
+
+  out.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function saveReportAsPDF() {
+  const target = document.getElementById("report-output");
+  if (!target || !target.innerHTML.trim()) { alert("先にレポートを生成してください"); return; }
+  if (typeof html2canvas === "undefined" || !window.jspdf) { alert("PDF生成ライブラリの読み込みに失敗しました"); return; }
+
+  target.classList.add("capturing");
+  const bg = getCssVar("--bg") || "#ffffff";
+  const isDark = (document.documentElement.getAttribute("data-theme") === "dark");
+
+  try {
+    // Render full report at high resolution
+    const canvas = await html2canvas(target, {
+      backgroundColor: bg,
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      windowWidth: target.scrollWidth
+    });
+
+    // Compute natural break points (bottom edge of each .card) in canvas pixels
+    const domWidth = target.offsetWidth;
+    const canvasScale = canvas.width / domWidth;
+    const cardEls = target.querySelectorAll(".card");
+    const breaks = [];
+    cardEls.forEach(c => {
+      const top = c.offsetTop + c.offsetHeight + parseFloat(getComputedStyle(c).marginBottom || 0);
+      breaks.push(Math.round(top * canvasScale));
+    });
+
+    // jsPDF setup — A4 portrait
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+    const pageW = 210, pageH = 297, margin = 8;
+    const contentW = pageW - margin * 2;
+    const contentH = pageH - margin * 2;
+
+    // How many source-canvas pixels fit on one page
+    const pxPerMm = canvas.width / contentW;
+    const pageHpx = contentH * pxPerMm;
+
+    let yPx = 0;
+    let pageIdx = 0;
+    while (yPx < canvas.height) {
+      let sliceH = Math.min(pageHpx, canvas.height - yPx);
+      const remaining = canvas.height - yPx;
+
+      // Try to find a natural break point near the end of the current page
+      if (remaining > pageHpx) {
+        // Look for the latest .card edge that's within [yPx + 0.5*pageHpx, yPx + sliceH]
+        const minEnd = yPx + pageHpx * 0.55;
+        const maxEnd = yPx + sliceH;
+        const candidates = breaks.filter(b => b > minEnd && b <= maxEnd);
+        if (candidates.length > 0) {
+          sliceH = candidates[candidates.length - 1] - yPx;
+        }
+      }
+
+      // Slice canvas
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = Math.round(sliceH);
+      const sctx = slice.getContext("2d");
+      sctx.fillStyle = bg;
+      sctx.fillRect(0, 0, slice.width, slice.height);
+      sctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+      const imgData = slice.toDataURL("image/jpeg", 0.92);
+      if (pageIdx > 0) pdf.addPage();
+      const renderH = (sliceH / pxPerMm);
+      pdf.addImage(imgData, "JPEG", margin, margin, contentW, renderH, undefined, "FAST");
+
+      // Page footer
+      pdf.setFontSize(8);
+      pdf.setTextColor(isDark ? 200 : 130);
+      pdf.text(`GROW — page ${pageIdx + 1}`, pageW - margin, pageH - 3, { align: "right" });
+
+      yPx += sliceH;
+      pageIdx++;
+    }
+
+    pdf.save(`grow_report_${today()}.pdf`);
+  } catch (err) {
+    alert("PDF生成に失敗しました: " + err.message);
+  } finally {
+    target.classList.remove("capturing");
+  }
+}
+
+// ========== Undo toast ==========
+let undoState = null;
+
+function showUndo(message, restoreFn) {
+  if (undoState) {
+    clearTimeout(undoState.timeoutId);
+    undoState = null;
+  }
+  const root = document.getElementById("toast-root");
+  root.innerHTML = `<div class="toast"><span>${escapeHtml(message)}</span><button onclick="executeUndo()">元に戻す</button></div>`;
+  undoState = {
+    restoreFn,
+    timeoutId: setTimeout(() => {
+      root.innerHTML = "";
+      undoState = null;
+    }, 5000)
+  };
+}
+
+function executeUndo() {
+  if (!undoState) return;
+  undoState.restoreFn();
+  saveState();
+  clearTimeout(undoState.timeoutId);
+  undoState = null;
+  document.getElementById("toast-root").innerHTML = "";
+  renderSampleNotice();
+  const active = document.querySelector(".tabs button.active");
+  if (active) switchTab(active.dataset.tab);
+}
+
+// ========== Timer ==========
+let timerInterval = null;
+let timerRemaining = 0;
+let audioCtx = null;
+
+function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    // Play silent 1-sample buffer to satisfy iOS user-gesture requirement
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (e) {}
+}
+
+function openTimer() {
+  if (timerInterval) {
+    if (confirm(`タイマー停止しますか? (残り ${timerRemaining}秒)`)) stopTimer();
+    return;
+  }
+  const root = document.getElementById("modal-root");
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>⏱ セット間タイマー</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <button onclick="startTimer(60)">60秒</button>
+        <button onclick="startTimer(90)">90秒</button>
+        <button onclick="startTimer(120)">2分</button>
+        <button onclick="startTimer(180)">3分</button>
+      </div>
+      <div class="field"><label>カスタム(秒)</label><input type="number" id="custom-timer" inputmode="numeric" placeholder="例: 150"></div>
+      <div class="row">
+        <button class="secondary" onclick="closeModal()">閉じる</button>
+        <button onclick="startCustomTimer()">スタート</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function startCustomTimer() {
+  const s = parseInt(document.getElementById("custom-timer").value);
+  if (!isNaN(s) && s > 0) startTimer(s);
+  else alert("秒数を入力してください");
+}
+
+function startTimer(seconds) {
+  unlockAudio();
+  closeModal();
+  timerRemaining = seconds;
+  updateTimerFAB();
+  timerInterval = setInterval(() => {
+    timerRemaining--;
+    updateTimerFAB();
+    if (timerRemaining <= 0) finishTimer();
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRemaining = 0;
+  updateTimerFAB();
+}
+
+function finishTimer() {
+  stopTimer();
+  if (navigator.vibrate) navigator.vibrate([200, 80, 200, 80, 200]);
+  playBeep();
+}
+
+function playBeep() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    [0, 0.2, 0.4].forEach(delay => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      const t = audioCtx.currentTime + delay;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+      osc.start(t);
+      osc.stop(t + 0.18);
+    });
+  } catch (e) {}
+}
+
+function updateTimerFAB() {
+  const fab = document.getElementById("timer-fab");
+  if (timerRemaining > 0) {
+    fab.classList.add("active");
+    const m = Math.floor(timerRemaining / 60);
+    const s = timerRemaining % 60;
+    fab.innerHTML = `<span class="countdown">${m > 0 ? m + ":" + String(s).padStart(2, "0") : s + "s"}</span>`;
+  } else {
+    fab.classList.remove("active");
+    fab.innerHTML = "⏱";
+  }
+}
+
+// ========== Sample data ==========
+function loadSampleData() {
+  const hasData = state.workouts.length > 0 || state.weights.length > 0;
+  const msg = hasData
+    ? "サンプル(約3ヶ月分)を既存データに追加します。続行しますか?"
+    : "サンプルデータ(約3ヶ月分)を読み込みます。続行しますか?";
+  if (!confirm(msg)) return;
+
+  Object.entries(PRESET_EXERCISES).forEach(([category, names]) => {
+    names.forEach(name => {
+      if (!state.exercises.some(e => e.name === name && e.category === category)) {
+        state.exercises.push({ id: uuid(), name, category });
+      }
+    });
+  });
+
+  generateSampleData();
+  saveState();
+  renderSampleNotice();
+  alert("サンプルデータを読み込みました。上部の「サンプル表示中」バナーから後でまとめて削除できます。");
+  switchTab("analysis");
+}
+
+function generateSampleData() {
+  const todayD = new Date();
+  const days = 90;
+
+  for (let w = days; w >= 0; w -= 7) {
+    const d = new Date(todayD);
+    d.setDate(d.getDate() - w);
+    const bw = 70 + (days - w) / days * 2 + (Math.random() - 0.5) * 0.6;
+    const dateStr = localDateStr(d);
+    if (!state.weights.some(x => x.date === dateStr)) {
+      state.weights.push({ id: uuid(), date: dateStr, weight: Math.round(bw * 10) / 10, isSample: true });
+    }
+  }
+
+  const program = {
+    1: { category: "胸", exercises: [
+      { name: "ベンチプレス", startW: 60, gain: 8, reps: 7, sets: 3 },
+      { name: "インクラインベンチプレス", startW: 40, gain: 6, reps: 9, sets: 3 },
+      { name: "ダンベルフライ", startW: 14, gain: 3, reps: 12, sets: 3 }
+    ]},
+    3: { category: "背中", exercises: [
+      { name: "デッドリフト", startW: 80, gain: 15, reps: 5, sets: 3 },
+      { name: "懸垂(チンニング)", startW: 0, gain: 5, reps: 8, sets: 3 },
+      { name: "ラットプルダウン", startW: 50, gain: 8, reps: 10, sets: 3 }
+    ]},
+    5: { category: "脚", exercises: [
+      { name: "スクワット", startW: 70, gain: 12, reps: 7, sets: 3 },
+      { name: "レッグプレス", startW: 120, gain: 25, reps: 10, sets: 3 },
+      { name: "レッグカール", startW: 30, gain: 5, reps: 12, sets: 3 }
+    ]}
+  };
+  const shoulderDay = { category: "肩", exercises: [
+    { name: "ショルダープレス", startW: 30, gain: 6, reps: 9, sets: 3 },
+    { name: "サイドレイズ", startW: 8, gain: 2, reps: 13, sets: 3 }
+  ]};
+  const armDay = { category: "腕", exercises: [
+    { name: "バーベルカール", startW: 20, gain: 4, reps: 9, sets: 3 },
+    { name: "トライセプスプッシュダウン", startW: 25, gain: 5, reps: 11, sets: 3 }
+  ]};
+  const coreDay = { category: "体幹", exercises: [
+    { name: "クランチ", startW: 0, gain: 0, reps: 20, sets: 3 }
+  ]};
+
+  const memos = ["調子良し", "ややキツかった", "フォーム意識", "重量UP挑戦!", "セット間休憩短め", "良いペース", "肘の角度を意識"];
+
+  for (let dayOffset = days; dayOffset >= 0; dayOffset--) {
+    const d = new Date(todayD);
+    d.setDate(d.getDate() - dayOffset);
+    const dow = d.getDay();
+    const progress = (days - dayOffset) / days;
+
+    let session = null;
+    if (dow === 1 || dow === 3 || dow === 5) session = program[dow];
+    else if (dow === 6) session = Math.floor(dayOffset / 7) % 2 === 0 ? shoulderDay : armDay;
+    else if (dow === 2 && Math.random() < 0.35) session = coreDay;
+    if (!session) continue;
+    if (Math.random() < 0.12) continue;
+
+    const date = localDateStr(d);
+    session.exercises.forEach((ex, idx) => {
+      const wRaw = ex.startW + ex.gain * progress + (Math.random() - 0.5) * 2;
+      const weight = Math.max(0, Math.round(wRaw * 2) / 2);
+      const repsVar = ex.reps + Math.floor((Math.random() - 0.5) * 3);
+      // Build per-set with slight realistic variation (e.g., pyramid down on reps)
+      const setsArr = [];
+      for (let si = 0; si < ex.sets; si++) {
+        const sReps = Math.max(1, Math.max(1, repsVar) - Math.floor(si * 0.6 + Math.random() * 1.5));
+        setsArr.push({ weight, reps: sReps });
+      }
+      state.workouts.push({
+        id: uuid() + "_" + idx,
+        date,
+        category: session.category,
+        exercise: ex.name,
+        sets: setsArr,
+        memo: idx === 0 && Math.random() < 0.22 ? memos[Math.floor(Math.random() * memos.length)] : "",
+        isSample: true
+      });
+    });
+  }
+}
+
+function hasSampleData() {
+  return state.workouts.some(w => w.isSample) || state.weights.some(w => w.isSample);
+}
+
+function removeSampleData() {
+  if (!hasSampleData()) { alert("削除するサンプルデータがありません"); return; }
+  const wCount = state.workouts.filter(w => w.isSample).length;
+  const bwCount = state.weights.filter(w => w.isSample).length;
+  if (!confirm(`サンプル記録 ${wCount}件・体重 ${bwCount}件 を削除します。\n(自分で追加した記録は残ります)`)) return;
+  state.workouts = state.workouts.filter(w => !w.isSample);
+  state.weights = state.weights.filter(w => !w.isSample);
+  saveState();
+  renderSampleNotice();
+  const active = document.querySelector(".tabs button.active");
+  if (active) switchTab(active.dataset.tab);
+}
+
+function renderSampleNotice() {
+  const c = document.getElementById("sample-notice-container");
+  if (!c) return;
+  if (hasSampleData()) {
+    c.innerHTML = `<div class="sample-notice"><span class="left"><span class="sample-tag">サンプル</span>表示中</span><button onclick="removeSampleData()">削除</button></div>`;
+  } else {
+    c.innerHTML = "";
+  }
+  const btn = document.getElementById("remove-sample-btn");
+  if (btn) btn.style.display = hasSampleData() ? "block" : "none";
+}
+
+function clearAllWorkouts() {
+  if (state.workouts.length === 0) { alert("削除するトレーニング記録がありません"); return; }
+  if (!confirm(`トレーニング記録を ${state.workouts.length}件 すべて削除します。\n(体重・プロフィール・カスタム種目は残ります)\n続行?`)) return;
+  const removed = state.workouts;
+  state.workouts = [];
+  saveState();
+  renderSampleNotice();
+  switchTab("record");
+  showUndo(`${removed.length}件を削除しました`, () => { state.workouts.push(...removed); });
+}
+
+function clearAllWeights() {
+  if (state.weights.length === 0) { alert("削除する体重記録がありません"); return; }
+  if (!confirm(`体重記録を ${state.weights.length}件 すべて削除します。続行?`)) return;
+  const removed = state.weights;
+  state.weights = [];
+  saveState();
+  renderSampleNotice();
+  switchTab("weight");
+  showUndo(`${removed.length}件を削除しました`, () => { state.weights.push(...removed); });
+}
+
+function jumpTo(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const y = el.getBoundingClientRect().top + window.scrollY - 60;
+  window.scrollTo({ top: y, behavior: "smooth" });
+  // Immediately set the chip active (observer also updates on scroll)
+  document.querySelectorAll("#analysis-chips button").forEach(b => {
+    b.classList.toggle("active", b.dataset.target === id);
+  });
+}
+
+let analysisObserver = null;
+function setupAnalysisObserver() {
+  if (analysisObserver) analysisObserver.disconnect();
+  const sections = ["sec-profile", "sec-coach", "sec-last", "sec-heatmap", "sec-volume", "sec-share", "sec-ranking", "sec-exercise", "sec-pr"];
+  analysisObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        document.querySelectorAll("#analysis-chips button").forEach(b => {
+          b.classList.toggle("active", b.dataset.target === id);
+        });
+      }
+    });
+  }, { rootMargin: "-25% 0px -60% 0px", threshold: 0 });
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) analysisObserver.observe(el);
+  });
+}
+
+function addPresetExercises() {
+  let added = 0;
+  Object.entries(PRESET_EXERCISES).forEach(([category, names]) => {
+    names.forEach(name => {
+      if (!state.exercises.some(e => e.name === name && e.category === category)) {
+        state.exercises.push({ id: uuid(), name, category });
+        added++;
+      }
+    });
+  });
+  saveState();
+  renderSettingsTab();
+  if (added === 0) alert("プリセット種目はすでにすべて登録されています");
+  else alert(`${added}件の種目を追加しました`);
+}
+
+// ========== Init ==========
+function init() {
+  applyTheme();
+  // Esc closes modals
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const root = document.getElementById("modal-root");
+      if (root && root.innerHTML.trim()) closeModal();
+    }
+  });
+  document.getElementById("rec-date").value = today();
+  document.getElementById("bw-date").value = today();
+  document.getElementById("rec-category").onchange = () => {
+    populateExerciseSelect();
+    updatePrevRecord();
+  };
+  const exInput = document.getElementById("rec-exercise");
+  exInput.oninput = () => { updatePrevRecord(); updateRecordFormForExercise(); };
+  exInput.onchange = () => { updatePrevRecord(); updateRecordFormForExercise(); };
+  initSetRowsForExercise();
+  renderSampleNotice();
+  renderRecordTab();
+}
+
+init();
+</script>
+</body>
+</html>

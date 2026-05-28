@@ -1,0 +1,13 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# Claude Code local config (project-specific, not for publishing)
+.claude/
+
+# Logs / temp
+*.log
+*.tmp
