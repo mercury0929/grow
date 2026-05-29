@@ -3351,6 +3351,7 @@ function showMaskDialog(action) {
   const root = document.getElementById("modal-root");
   const title = action === "csv" ? "CSV出力" : "レポート生成";
   const hasSample = hasSampleData();
+  const onlySample = hasSample && !hasRealData();
   root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
     <div class="modal">
       <h2>${title} — 出力項目</h2>
@@ -3359,7 +3360,7 @@ function showMaskDialog(action) {
       <label class="checkbox-row"><input type="checkbox" id="mask-height" checked> 身長</label>
       <label class="checkbox-row"><input type="checkbox" id="mask-age" checked> 年齢</label>
       <label class="checkbox-row"><input type="checkbox" id="mask-memo" checked> メモ</label>
-      ${hasSample ? `<label class="checkbox-row" style="border-top:1px solid var(--separator);margin-top:8px;padding-top:12px"><input type="checkbox" id="mask-sample"> サンプルデータを含める <span class="muted" style="font-size:11px;margin-left:auto">(共有時は通常 OFF)</span></label>` : ""}
+      ${hasSample ? `<label class="checkbox-row" style="border-top:1px solid var(--separator);margin-top:8px;padding-top:12px"><input type="checkbox" id="mask-sample" ${onlySample ? "checked" : ""}> サンプルデータを含める <span class="muted" style="font-size:11px;margin-left:auto">${onlySample ? "(現在サンプルのみ)" : "(共有時は通常 OFF)"}</span></label>` : ""}
       <div class="row" style="margin-top:14px">
         <button class="secondary" onclick="closeModal()">キャンセル</button>
         <button onclick="proceedMask('${action}')">続行</button>
@@ -3469,7 +3470,7 @@ function generateReport(mask) {
   }).filter(x => x).sort((a, b) => b.growth - a.growth);
 
   const totalSessions = new Set(periodWorkouts.map(w => w.date)).size;
-  const totalVolume = periodWorkouts.reduce((s, w) => s + totalVolume(w), 0);
+  const periodVolume = periodWorkouts.reduce((s, w) => s + totalVolume(w), 0);
 
   let strengthHTML = "";
   if (bw && prs.length > 0) {
@@ -3493,7 +3494,7 @@ function generateReport(mask) {
       </div>
       <div class="stat-grid">
         <div class="stat-box"><div class="label">セッション数</div><div class="value">${totalSessions}</div></div>
-        <div class="stat-box"><div class="label">総ボリューム</div><div class="value">${(totalVolume / 1000).toFixed(1)}t</div></div>
+        <div class="stat-box"><div class="label">総ボリューム</div><div class="value">${(periodVolume / 1000).toFixed(1)}t</div></div>
         <div class="stat-box"><div class="label">記録数</div><div class="value">${periodWorkouts.length}</div></div>
         <div class="stat-box"><div class="label">種目数</div><div class="value">${new Set(periodWorkouts.map(w => w.exercise)).size}</div></div>
       </div>
@@ -3932,6 +3933,10 @@ function generateSampleData() {
 
 function hasSampleData() {
   return state.workouts.some(w => w.isSample) || state.weights.some(w => w.isSample);
+}
+
+function hasRealData() {
+  return state.workouts.some(w => !w.isSample) || state.weights.some(w => !w.isSample);
 }
 
 function removeSampleData() {
