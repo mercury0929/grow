@@ -1291,6 +1291,12 @@ button.plain.block {
       <p class="muted" style="font-size:12px;margin-bottom:10px">すべての記録・プロフィール・カスタム種目・テーマ・目標が削除されます。元に戻せません。</p>
       <button class="danger block" onclick="confirmReset()">全データを削除</button>
     </div>
+
+    <div style="text-align:center;padding:16px 0 8px" class="muted">
+      <div style="font-size:13px;font-weight:600">GROW</div>
+      <div id="app-version" style="font-size:11px;margin-top:2px"></div>
+      <div style="font-size:11px;margin-top:6px;opacity:.8">最新版が表示されない時は、ブラウザを再読み込み (キャッシュ更新) してください</div>
+    </div>
   </div>
 
   <nav class="tabs">
@@ -1312,6 +1318,7 @@ button.plain.block {
 "use strict";
 
 // ========== Constants ==========
+const APP_VERSION = "2026.05.29";
 const STORAGE_KEY = "kintore_app_v1";
 const CATEGORIES = ["胸", "背中", "脚", "肩", "腕", "体幹"];
 const CAT_COLORS = ["#e57373", "#64b5f6", "#81c784", "#ffb74d", "#ba68c8", "#4db6ac"];
@@ -3446,6 +3453,22 @@ function generateReport(mask) {
   const allWeights = filterSampleIfNeeded(state.weights, mask.includeSample);
   const periodWorkouts = allWorkouts.filter(w => w.date >= cutoffStr);
 
+  // 空レポートの理由を明示 (スマホで「何も出ない」混乱を防ぐ)
+  if (periodWorkouts.length === 0) {
+    const sampleInPeriod = state.workouts.some(w => w.isSample && w.date >= cutoffStr);
+    const hasAnyRecord = state.workouts.length > 0;
+    let msg;
+    if (!mask.includeSample && sampleInPeriod) {
+      msg = "この期間に表示できる記録がありません。<br>サンプルで表示を確認するには、もう一度「レポート生成」を押し、<b>「サンプルデータを含める」にチェック</b>を入れてください。";
+    } else if (!hasAnyRecord) {
+      msg = "まだトレーニング記録がありません。<br>「記録」タブから追加すると、ここに集計が表示されます。";
+    } else {
+      msg = "選択した期間に記録がありません。<br><b>「期間」をより長く</b>設定するか、新しい記録を追加してください。";
+    }
+    document.getElementById("report-empty-banner").innerHTML =
+      `<div class="card" style="border-left:4px solid var(--primary)"><div style="font-size:14px;line-height:1.7">⚠️ ${msg}</div></div>`;
+  }
+
   const profileParts = [];
   const ageVal = getAge();
   if (mask.age && ageVal != null) profileParts.push(`${ageVal}歳`);
@@ -4055,6 +4078,8 @@ function init() {
   initSetRowsForExercise();
   renderSampleNotice();
   renderRecordTab();
+  const verEl = document.getElementById("app-version");
+  if (verEl) verEl.textContent = "ver " + APP_VERSION;
 }
 
 init();
