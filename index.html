@@ -2631,10 +2631,10 @@ function renderWeightTab() {
   listEl.innerHTML = itemsHTML + moreHTML;
 }
 
-function chartBaseOptions() {
-  const text = getCssVar("--text-muted");
-  const border = getCssVar("--border");
-  return {
+function chartBaseOptions(colors) {
+  const text = (colors && colors.text) || getCssVar("--text-muted");
+  const border = (colors && colors.border) || getCssVar("--border");
+  const opts = {
     responsive: true,
     maintainAspectRatio: true,
     plugins: { legend: { labels: { color: text, font: { size: 11 } } } },
@@ -2643,6 +2643,9 @@ function chartBaseOptions() {
       y: { ticks: { color: text, font: { size: 10 } }, grid: { color: border }, beginAtZero: false }
     }
   };
+  // 印刷(PDF)用は即時描画にして、撮影タイミングで中途半端に写らないようにする
+  if (colors) opts.animation = false;
+  return opts;
 }
 
 // ========== Analysis ==========
@@ -3441,20 +3444,30 @@ function csvEscape(v) {
 
 // ========== Report ==========
 let reportCharts = [];
+let lastReportMask = null;
+
+// 紙(白背景)用の固定パレット — テーマに関係なくPDFを見やすく
+const PRINT_VARS = {
+  "--bg": "#ffffff", "--surface": "#ffffff", "--surface-2": "#f4f4f7",
+  "--text": "#000000", "--text-muted": "rgba(60,60,67,0.78)", "--text-tertiary": "rgba(60,60,67,0.4)",
+  "--border": "rgba(60,60,67,0.2)", "--separator": "rgba(60,60,67,0.29)",
+  "--primary": "#0a6cff", "--success": "#1f9d40", "--danger": "#d92b1f", "--warning": "#c77700"
+};
+const PRINT_CHART_COLORS = { text: "rgba(60,60,67,0.85)", border: "rgba(60,60,67,0.16)", primary: "#0a6cff" };
+
 function generateReport(mask) {
+  lastReportMask = mask;
   reportCharts.forEach(c => c.destroy());
   reportCharts = [];
-  document.getElementById("report-empty-banner").innerHTML = "";
 
   const days = parseInt(document.getElementById("report-period").value);
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = localDateStr(cutoff);
-  const allWorkouts = filterSampleIfNeeded(state.workouts, mask.includeSample);
-  const allWeights = filterSampleIfNeeded(state.weights, mask.includeSample);
-  const periodWorkouts = allWorkouts.filter(w => w.date >= cutoffStr);
+  const periodCount = filterSampleIfNeeded(state.workouts, mask.includeSample).filter(w => w.date >= cutoffStr).length;
 
   // 空レポートの理由を明示 (スマホで「何も出ない」混乱を防ぐ)
-  if (periodWorkouts.length === 0) {
+  const banner = document.getElementById("report-empty-banner");
+  if (periodCount === 0) {
     const sampleInPeriod = state.workouts.some(w => w.isSample && w.date >= cutoffStr);
     const hasAnyRecord = state.workouts.length > 0;
     let msg;
@@ -3465,9 +3478,35 @@ function generateReport(mask) {
     } else {
       msg = "選択した期間に記録がありません。<br><b>「期間」をより長く</b>設定するか、新しい記録を追加してください。";
     }
-    document.getElementById("report-empty-banner").innerHTML =
-      `<div class="card" style="border-left:4px solid var(--primary)"><div style="font-size:14px;line-height:1.7">⚠️ ${msg}</div></div>`;
+    banner.innerHTML = `<div class="card" style="border-left:4px solid var(--primary)"><div style="font-size:14px;line-height:1.7">⚠️ ${msg}</div></div>`;
+  } else {
+    banner.innerHTML = "";
   }
+
+  const out = document.getElementById("report-output");
+  out.innerHTML = `
+    <div class="report-actions" style="margin-bottom:14px">
+      <button class="block" onclick="saveReportAsPDF()">📄 このレポートをPDFで保存</button>
+      <p class="help-text" style="text-align:center;margin-top:6px">下のプレビューを確認して保存。PDFは印刷・共有しやすい紙レイアウトで出力されます。</p>
+    </div>
+    <div id="report-paper"></div>
+    <div class="report-actions" style="margin-top:6px">
+      <button class="secondary block" onclick="saveReportAsPDF()">📄 PDFで保存</button>
+    </div>`;
+  renderReportContent(out.querySelector("#report-paper"), mask, days, reportCharts, null);
+
+  out.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// レポート本体を任意の要素に描画 (画面プレビューとPDF用紙で共用)
+// colors を渡すとグラフの文字/線色を上書き (PDFの白背景用)
+function renderReportContent(rootEl, mask, days, chartsArr, colors) {
+  const cc = colors || { text: getCssVar("--text-muted"), border: getCssVar("--border"), primary: getCssVar("--primary") };
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = localDateStr(cutoff);
+  const allWorkouts = filterSampleIfNeeded(state.workouts, mask.includeSample);
+  const allWeights = filterSampleIfNeeded(state.weights, mask.includeSample);
+  const periodWorkouts = allWorkouts.filter(w => w.date >= cutoffStr);
 
   const profileParts = [];
   const ageVal = getAge();
@@ -3479,7 +3518,6 @@ function generateReport(mask) {
     if (latest) { bw = latest.weight; profileParts.push(`体重${latest.weight}kg`); }
   }
 
-  const out = document.getElementById("report-output");
   const exs = [...new Set(allWorkouts.map(w => w.exercise))];
   const prs = exs.map(ex => ({ ex, pr: getPRFrom(allWorkouts, ex) })).filter(x => x.pr).sort((a, b) => b.pr.oneRM - a.pr.oneRM);
 
@@ -3503,10 +3541,7 @@ function generateReport(mask) {
 
   const memos = mask.memo ? periodWorkouts.filter(w => w.memo).sort((a, b) => b.date.localeCompare(a.date)) : [];
 
-  out.innerHTML = `
-    <div style="text-align:right;margin-bottom:8px" class="no-capture">
-      <button class="ghost small" onclick="saveReportAsPDF()">📄 PDFで保存</button>
-    </div>
+  rootEl.innerHTML = `
     <div class="card">
       <div class="report-header">
         <h1>💪 トレーニング・サマリー</h1>
@@ -3535,14 +3570,14 @@ function generateReport(mask) {
 
     <div class="card">
       <h2>📊 週ボリューム推移</h2>
-      ${periodWorkouts.length === 0 ? '<div class="muted">データがありません</div>' : '<canvas id="report-volume"></canvas>'}
+      ${periodWorkouts.length === 0 ? '<div class="muted">データがありません</div>' : '<canvas data-chart="volume"></canvas>'}
     </div>
 
-    ${mask.bodyWeight && allWeights.filter(w => w.date >= cutoffStr).length > 0 ? `<div class="card"><h2>⚖️ 体重推移</h2><canvas id="report-weight"></canvas></div>` : ""}
+    ${mask.bodyWeight && allWeights.filter(w => w.date >= cutoffStr).length > 0 ? `<div class="card"><h2>⚖️ 体重推移</h2><canvas data-chart="weight"></canvas></div>` : ""}
 
     <div class="card">
       <h2>📈 主要種目の推移</h2>
-      <div id="report-exercise-charts"></div>
+      <div data-exercise-charts></div>
     </div>
 
     ${memos.length > 0 ? `<div class="card"><h2>📝 メモ</h2>${memos.slice(0, 10).map(m => `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div class="muted" style="font-size:11px">${m.date} / ${escapeHtml(m.exercise)}</div><div style="font-size:13px;margin-top:2px">${escapeHtml(m.memo)}</div></div>`).join("")}</div>` : ""}
@@ -3561,26 +3596,26 @@ function generateReport(mask) {
       data: weeks.map(w => weekMap[w][cat] || 0),
       backgroundColor: CAT_COLORS[i]
     }));
-    const opts = chartBaseOptions();
+    const opts = chartBaseOptions(cc);
     opts.scales.x.stacked = true;
     opts.scales.y.stacked = true;
     opts.scales.y.beginAtZero = true;
     opts.scales.y.ticks.callback = function(v) { return v >= 1000 ? (v / 1000) + "t" : v + ""; };
-    const volEl = document.getElementById("report-volume");
-    if (volEl) reportCharts.push(new Chart(volEl, { type: "bar", data: { labels: weeks, datasets }, options: opts }));
+    const volEl = rootEl.querySelector('[data-chart="volume"]');
+    if (volEl) chartsArr.push(new Chart(volEl, { type: "bar", data: { labels: weeks, datasets }, options: opts }));
   }
 
   if (mask.bodyWeight) {
     const ws = [...allWeights].filter(w => w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
-    const el = document.getElementById("report-weight");
+    const el = rootEl.querySelector('[data-chart="weight"]');
     if (el && ws.length > 0) {
-      reportCharts.push(new Chart(el, {
+      chartsArr.push(new Chart(el, {
         type: "line",
         data: {
           labels: ws.map(w => w.date),
-          datasets: [{ label: "体重(kg)", data: ws.map(w => w.weight), borderColor: getCssVar("--primary"), backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
+          datasets: [{ label: "体重(kg)", data: ws.map(w => w.weight), borderColor: cc.primary, backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
         },
-        options: chartBaseOptions()
+        options: chartBaseOptions(cc)
       }));
     }
   }
@@ -3588,57 +3623,75 @@ function generateReport(mask) {
   const exCounts = {};
   periodWorkouts.forEach(w => { exCounts[w.exercise] = (exCounts[w.exercise] || 0) + 1; });
   const topEx = Object.entries(exCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(x => x[0]);
-  const exContainer = document.getElementById("report-exercise-charts");
+  const exContainer = rootEl.querySelector('[data-exercise-charts]');
   if (topEx.length === 0) {
     exContainer.innerHTML = '<div class="muted">データがありません</div>';
   } else {
-    topEx.forEach((ex, idx) => {
+    topEx.forEach((ex) => {
       const div = document.createElement("div");
       div.style.marginBottom = "16px";
-      div.innerHTML = `<h3 style="margin-bottom:6px;color:var(--text)">${escapeHtml(ex)}</h3><canvas id="rep-ex-${idx}"></canvas>`;
+      const h3 = document.createElement("h3");
+      h3.style.cssText = "margin-bottom:6px;color:var(--text)";
+      h3.textContent = ex;
+      const canvas = document.createElement("canvas");
+      div.appendChild(h3);
+      div.appendChild(canvas);
       exContainer.appendChild(div);
       const records = allWorkouts.filter(w => w.exercise === ex && w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
       if (records.length > 0) {
-        reportCharts.push(new Chart(document.getElementById(`rep-ex-${idx}`), {
+        chartsArr.push(new Chart(canvas, {
           type: "line",
           data: {
             labels: records.map(r => r.date),
-            datasets: [{ label: "推定1RM(kg)", data: records.map(r => getBest1RM(r)), borderColor: getCssVar("--primary"), backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
+            datasets: [{ label: "推定1RM(kg)", data: records.map(r => getBest1RM(r)), borderColor: cc.primary, backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
           },
-          options: chartBaseOptions()
+          options: chartBaseOptions(cc)
         }));
       }
     });
   }
-
-  out.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function saveReportAsPDF() {
-  const target = document.getElementById("report-output");
-  if (!target || !target.innerHTML.trim()) { alert("先にレポートを生成してください"); return; }
+  if (!lastReportMask) { alert("先にレポートを生成してください"); return; }
   if (typeof html2canvas === "undefined" || !window.jspdf) { alert("PDF生成ライブラリの読み込みに失敗しました"); return; }
 
-  target.classList.add("capturing");
-  const bg = getCssVar("--bg") || "#ffffff";
-  const isDark = (document.documentElement.getAttribute("data-theme") === "dark");
+  showToast("PDFを作成中…", 10000);
 
+  // A4幅 (96dpi ≒ 794px) の白い「紙」をオフスクリーンに作り、そこに描画して撮影する。
+  // → スマホ画面の引き伸ばしではなく、紙向けの整ったレイアウトになる。
+  const PAGE_PX = 794;          // A4 width @96dpi
+  const PAD_PX = 36;            // paper inner margin
+  const days = parseInt(document.getElementById("report-period").value);
+  const paper = document.createElement("div");
+  paper.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:" + PAGE_PX + "px;padding:" + PAD_PX + "px;" +
+    "background:#fff;color:#000;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Yu Gothic',sans-serif;" +
+    Object.entries(PRINT_VARS).map(([k, v]) => k + ":" + v).join(";") + ";";
+  document.body.appendChild(paper);
+
+  const pdfCharts = [];
   try {
-    // Render full report at high resolution
-    const canvas = await html2canvas(target, {
-      backgroundColor: bg,
+    renderReportContent(paper, lastReportMask, days, pdfCharts, PRINT_CHART_COLORS);
+
+    // グラフ描画が落ち着くまで待つ (responsive chart の初回レイアウト)
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise(r => setTimeout(r, 250));
+
+    const canvas = await html2canvas(paper, {
+      backgroundColor: "#ffffff",
       scale: 2,
       useCORS: true,
       logging: false,
-      windowWidth: target.scrollWidth
+      width: PAGE_PX,
+      windowWidth: PAGE_PX
     });
 
     // Compute natural break points (bottom edge of each .card) in canvas pixels
-    const domWidth = target.offsetWidth;
+    const domWidth = paper.offsetWidth;
     const canvasScale = canvas.width / domWidth;
-    const cardEls = target.querySelectorAll(".card");
     const breaks = [];
-    cardEls.forEach(c => {
+    paper.querySelectorAll(".card").forEach(c => {
       const top = c.offsetTop + c.offsetHeight + parseFloat(getComputedStyle(c).marginBottom || 0);
       breaks.push(Math.round(top * canvasScale));
     });
@@ -3650,7 +3703,6 @@ async function saveReportAsPDF() {
     const contentW = pageW - margin * 2;
     const contentH = pageH - margin * 2;
 
-    // How many source-canvas pixels fit on one page
     const pxPerMm = canvas.width / contentW;
     const pageHpx = contentH * pxPerMm;
 
@@ -3660,23 +3712,19 @@ async function saveReportAsPDF() {
       let sliceH = Math.min(pageHpx, canvas.height - yPx);
       const remaining = canvas.height - yPx;
 
-      // Try to find a natural break point near the end of the current page
+      // Try to find a natural break point (card edge) near the end of the current page
       if (remaining > pageHpx) {
-        // Look for the latest .card edge that's within [yPx + 0.5*pageHpx, yPx + sliceH]
         const minEnd = yPx + pageHpx * 0.55;
         const maxEnd = yPx + sliceH;
         const candidates = breaks.filter(b => b > minEnd && b <= maxEnd);
-        if (candidates.length > 0) {
-          sliceH = candidates[candidates.length - 1] - yPx;
-        }
+        if (candidates.length > 0) sliceH = candidates[candidates.length - 1] - yPx;
       }
 
-      // Slice canvas
       const slice = document.createElement("canvas");
       slice.width = canvas.width;
       slice.height = Math.round(sliceH);
       const sctx = slice.getContext("2d");
-      sctx.fillStyle = bg;
+      sctx.fillStyle = "#ffffff";
       sctx.fillRect(0, 0, slice.width, slice.height);
       sctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
 
@@ -3685,21 +3733,20 @@ async function saveReportAsPDF() {
       const renderH = (sliceH / pxPerMm);
       pdf.addImage(imgData, "JPEG", margin, margin, contentW, renderH, undefined, "FAST");
 
-      // Page footer
       pdf.setFontSize(8);
-      pdf.setTextColor(isDark ? 200 : 130);
+      pdf.setTextColor(140);
       pdf.text(`GROW — page ${pageIdx + 1}`, pageW - margin, pageH - 3, { align: "right" });
 
       yPx += sliceH;
       pageIdx++;
     }
 
-    // Route through unified download() for iOS Web Share + save feedback
     await download(pdf.output("blob"), `grow_report_${today()}.pdf`);
   } catch (err) {
     alert("PDF生成に失敗しました: " + err.message);
   } finally {
-    target.classList.remove("capturing");
+    pdfCharts.forEach(c => c.destroy());
+    paper.remove();
   }
 }
 
