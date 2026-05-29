@@ -1385,8 +1385,16 @@ function loadState() {
   }
 }
 
+let saveWarned = false;
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    if (!saveWarned) {
+      saveWarned = true;
+      alert("⚠️ データの保存に失敗しました。\nブラウザの空き容量不足、またはプライベートブラウズが原因の可能性があります。\n「設定 → 移行用エクスポート」でバックアップを取り、不要な記録を整理してください。");
+    }
+  }
 }
 
 let state = loadState();
@@ -1761,20 +1769,27 @@ function updatePrevRecord() {
 }
 
 function setGoalForExercise(ex) {
-  const current = state.settings.goals?.[ex] ?? "";
-  const input = prompt(`「${ex}」の目標推定1RM (kg) を入力 (空欄でクリア):`, current);
-  if (input === null) return;
-  if (!state.settings.goals) state.settings.goals = {};
-  const trimmed = input.trim();
-  if (trimmed === "") {
-    delete state.settings.goals[ex];
-  } else {
-    const v = parseFloat(trimmed);
-    if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
-    state.settings.goals[ex] = v;
-  }
-  saveState();
-  updatePrevRecord();
+  promptModal({
+    title: `🎯 ${ex} の目標`,
+    label: "目標の推定1RM (kg)。空欄にすると目標を削除します。",
+    value: state.settings.goals?.[ex] ?? "",
+    type: "number",
+    placeholder: "例: 100",
+    okLabel: "保存",
+    onSubmit: (input) => {
+      if (!state.settings.goals) state.settings.goals = {};
+      const trimmed = (input || "").trim();
+      if (trimmed === "") {
+        delete state.settings.goals[ex];
+      } else {
+        const v = parseFloat(trimmed);
+        if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
+        state.settings.goals[ex] = v;
+      }
+      saveState();
+      updatePrevRecord();
+    }
+  });
 }
 
 // ===== Plate calculator =====
@@ -2152,6 +2167,29 @@ function openEditModal(opts) {
 
 function closeModal() {
   document.getElementById("modal-root").innerHTML = "";
+}
+
+// Reusable text/number input modal (replaces native prompt() — works in standalone PWA)
+function promptModal(opts) {
+  const root = document.getElementById("modal-root");
+  const type = opts.type || "text";
+  const extra = type === "number" ? 'step="0.5" inputmode="decimal"' : "";
+  root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h2>${escapeHtml(opts.title)}</h2>
+      ${opts.label ? `<p class="muted" style="margin-bottom:8px">${escapeHtml(opts.label)}</p>` : ""}
+      <input type="${type}" id="prompt-modal-input" value="${escapeHtml(opts.value != null ? String(opts.value) : "")}" placeholder="${escapeHtml(opts.placeholder || "")}" ${extra}>
+      <div class="row" style="margin-top:14px">
+        <button class="secondary" onclick="closeModal()">キャンセル</button>
+        <button id="prompt-modal-ok">${escapeHtml(opts.okLabel || "OK")}</button>
+      </div>
+    </div>
+  </div>`;
+  const input = document.getElementById("prompt-modal-input");
+  setTimeout(() => { input.focus(); input.select(); }, 60);
+  const submit = () => { const v = input.value; closeModal(); opts.onSubmit(v); };
+  document.getElementById("prompt-modal-ok").onclick = submit;
+  input.onkeydown = (e) => { if (e.key === "Enter") submit(); };
 }
 
 function editWorkout(id) {
@@ -3002,20 +3040,27 @@ function renderGoalDisplay(ex) {
 function setGoal() {
   const ex = document.getElementById("analyze-exercise").value;
   if (!ex) { alert("先に種目を選択してください"); return; }
-  const current = state.settings.goals?.[ex] ?? "";
-  const input = prompt(`「${ex}」の目標推定1RM(kg)を入力 (削除する場合は空欄で OK):`, current);
-  if (input === null) return;
-  if (!state.settings.goals) state.settings.goals = {};
-  const trimmed = input.trim();
-  if (trimmed === "") {
-    delete state.settings.goals[ex];
-  } else {
-    const v = parseFloat(trimmed);
-    if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
-    state.settings.goals[ex] = v;
-  }
-  saveState();
-  renderGoalDisplay(ex);
+  promptModal({
+    title: `🎯 ${ex} の目標`,
+    label: "目標の推定1RM (kg)。空欄にすると目標を削除します。",
+    value: state.settings.goals?.[ex] ?? "",
+    type: "number",
+    placeholder: "例: 100",
+    okLabel: "保存",
+    onSubmit: (input) => {
+      if (!state.settings.goals) state.settings.goals = {};
+      const trimmed = (input || "").trim();
+      if (trimmed === "") {
+        delete state.settings.goals[ex];
+      } else {
+        const v = parseFloat(trimmed);
+        if (isNaN(v) || v <= 0) { alert("正の数を入力してください"); return; }
+        state.settings.goals[ex] = v;
+      }
+      saveState();
+      renderGoalDisplay(ex);
+    }
+  });
 }
 
 function renderPRList() {
@@ -3147,27 +3192,32 @@ function deleteExercise(id) {
 function renameExercise(id) {
   const ex = state.exercises.find(e => e.id === id);
   if (!ex) return;
-  const newName = prompt(`「${ex.name}」の新しい名前:`, ex.name);
-  if (newName === null) return;
-  const trimmed = newName.trim();
-  if (!trimmed || trimmed === ex.name) return;
-  if (state.exercises.some(e => e.name === trimmed && e.category === ex.category && e.id !== id)) {
-    alert("同じカテゴリにその名前の種目がすでに存在します");
-    return;
-  }
-  const oldName = ex.name;
-  const recordCount = state.workouts.filter(w => w.exercise === oldName).length;
-  if (recordCount > 0 && !confirm(`「${oldName}」を「${trimmed}」に変更します。\n過去 ${recordCount}件 の記録と、設定済みの目標も新名へ引き継がれます。続行?`)) return;
-
-  // Rename: exercise definition, all workouts, and goals
-  ex.name = trimmed;
-  state.workouts.forEach(w => { if (w.exercise === oldName) w.exercise = trimmed; });
-  if (state.settings.goals && state.settings.goals[oldName] != null) {
-    state.settings.goals[trimmed] = state.settings.goals[oldName];
-    delete state.settings.goals[oldName];
-  }
-  saveState();
-  renderSettingsTab();
+  promptModal({
+    title: "種目名を変更",
+    label: `「${ex.name}」の新しい名前`,
+    value: ex.name,
+    okLabel: "変更",
+    onSubmit: (newName) => {
+      const trimmed = (newName || "").trim();
+      if (!trimmed || trimmed === ex.name) return;
+      if (state.exercises.some(e => e.name === trimmed && e.category === ex.category && e.id !== id)) {
+        alert("同じカテゴリにその名前の種目がすでに存在します");
+        return;
+      }
+      const oldName = ex.name;
+      const recordCount = state.workouts.filter(w => w.exercise === oldName).length;
+      if (recordCount > 0 && !confirm(`「${oldName}」を「${trimmed}」に変更します。\n過去 ${recordCount}件 の記録と、設定済みの目標も新名へ引き継がれます。続行?`)) return;
+      // Rename: exercise definition, all workouts, and goals
+      ex.name = trimmed;
+      state.workouts.forEach(w => { if (w.exercise === oldName) w.exercise = trimmed; });
+      if (state.settings.goals && state.settings.goals[oldName] != null) {
+        state.settings.goals[trimmed] = state.settings.goals[oldName];
+        delete state.settings.goals[oldName];
+      }
+      saveState();
+      renderSettingsTab();
+    }
+  });
 }
 
 function applyTheme() {
@@ -3263,7 +3313,27 @@ function importJSON(event) {
   reader.readAsText(file);
 }
 
-function download(blob, filename) {
+function isIOS() {
+  return /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+async function download(blob, filename) {
+  // iOS Safari ignores the download attribute (opens in a new tab instead).
+  // Prefer Web Share API so the user can save to the Files app.
+  if (isIOS() && navigator.canShare) {
+    try {
+      const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+    } catch (e) {
+      // user cancelled or share failed → fall through to anchor download
+      if (e && e.name === "AbortError") return;
+    }
+  }
+  // Standard download (Android, desktop)
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
