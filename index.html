@@ -3326,6 +3326,7 @@ async function download(blob, filename) {
       const file = new File([blob], filename, { type: blob.type || "application/octet-stream" });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: filename });
+        showToast(`✓ 「${filename}」を共有/保存しました`);
         return;
       }
     } catch (e) {
@@ -3342,6 +3343,7 @@ async function download(blob, filename) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(`✓ 「${filename}」を保存しました。端末の「ダウンロード」または「ファイル」アプリで確認できます。`, 6000);
 }
 
 // ========== Mask Dialog ==========
@@ -3668,7 +3670,8 @@ async function saveReportAsPDF() {
       pageIdx++;
     }
 
-    pdf.save(`grow_report_${today()}.pdf`);
+    // Route through unified download() for iOS Web Share + save feedback
+    await download(pdf.output("blob"), `grow_report_${today()}.pdf`);
   } catch (err) {
     alert("PDF生成に失敗しました: " + err.message);
   } finally {
@@ -3693,6 +3696,16 @@ function showUndo(message, restoreFn) {
       undoState = null;
     }, 5000)
   };
+}
+
+// Simple feedback toast (no undo button)
+function showToast(message, duration = 5000) {
+  const root = document.getElementById("toast-root");
+  if (undoState) { clearTimeout(undoState.timeoutId); undoState = null; }
+  root.innerHTML = `<div class="toast"><span>${escapeHtml(message)}</span></div>`;
+  setTimeout(() => {
+    if (root.querySelector(".toast") && !undoState) root.innerHTML = "";
+  }, duration);
 }
 
 function executeUndo() {
