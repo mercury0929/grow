@@ -3445,6 +3445,7 @@ function csvEscape(v) {
 // ========== Report ==========
 let reportCharts = [];
 let lastReportMask = null;
+let lastReportDays = null;
 
 // 紙(白背景)用の固定パレット — テーマに関係なくPDFを見やすく
 const PRINT_VARS = {
@@ -3461,6 +3462,7 @@ function generateReport(mask) {
   reportCharts = [];
 
   const days = parseInt(document.getElementById("report-period").value);
+  lastReportDays = days;
   const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = localDateStr(cutoff);
   const periodCount = filterSampleIfNeeded(state.workouts, mask.includeSample).filter(w => w.date >= cutoffStr).length;
@@ -3662,7 +3664,8 @@ async function saveReportAsPDF() {
   // → スマホ画面の引き伸ばしではなく、紙向けの整ったレイアウトになる。
   const PAGE_PX = 794;          // A4 width @96dpi
   const PAD_PX = 36;            // paper inner margin
-  const days = parseInt(document.getElementById("report-period").value);
+  // 生成時の期間を使う (プレビュー後にプルダウンだけ変えられてもPDFと一致させる)
+  const days = lastReportDays != null ? lastReportDays : parseInt(document.getElementById("report-period").value);
   const paper = document.createElement("div");
   paper.style.cssText =
     "position:fixed;left:-10000px;top:0;width:" + PAGE_PX + "px;padding:" + PAD_PX + "px;" +
