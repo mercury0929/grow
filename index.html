@@ -1318,7 +1318,7 @@ button.plain.block {
 "use strict";
 
 // ========== Constants ==========
-const APP_VERSION = "2026.05.29";
+const APP_VERSION = "2026.05.30";
 const STORAGE_KEY = "kintore_app_v1";
 const CATEGORIES = ["胸", "背中", "脚", "肩", "腕", "体幹"];
 const CAT_COLORS = ["#e57373", "#64b5f6", "#81c784", "#ffb74d", "#ba68c8", "#4db6ac"];
@@ -2700,6 +2700,7 @@ function renderProfileStats() {
     const allEx = [...new Set(state.workouts.map(w => w.exercise))];
     const ratios = [];
     for (const ex of allEx) {
+      if (isTimeExercise(ex)) continue; // 時間種目(プランク等)は体重比(1RM÷体重)の対象外
       const pr = getPR(ex);
       if (pr) ratios.push({ exercise: ex, ratio: pr.oneRM / bw, oneRM: pr.oneRM });
     }
@@ -2846,15 +2847,19 @@ function renderGrowthRanking() {
   </div>`;
 
   if (growths.length >= 4) {
-    const worst = growths.slice(-3).reverse();
-    html += `<div class="growth-section" style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--separator)">
-      <h3>🐢 停滞気味</h3>
-      ${worst.map(g => `<div class="growth-row">
-        <span class="medal">·</span>
-        <span class="name">${escapeHtml(g.ex)}</span>
-        <span class="pct" style="color:${g.growth >= 0 ? "var(--text-muted)" : "var(--danger)"}">${g.growth >= 0 ? "+" : ""}${g.growth.toFixed(1)}%</span>
-      </div>`).join("")}
-    </div>`;
+    // 「伸びている」で既に出した種目は除外し、重複表示を防ぐ
+    const topSet = new Set(top.map(g => g.ex));
+    const worst = growths.filter(g => !topSet.has(g.ex)).slice(-3).reverse();
+    if (worst.length > 0) {
+      html += `<div class="growth-section" style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--separator)">
+        <h3>🐢 停滞気味</h3>
+        ${worst.map(g => `<div class="growth-row">
+          <span class="medal">·</span>
+          <span class="name">${escapeHtml(g.ex)}</span>
+          <span class="pct" style="color:${g.growth >= 0 ? "var(--text-muted)" : "var(--danger)"}">${g.growth >= 0 ? "+" : ""}${g.growth.toFixed(1)}%</span>
+        </div>`).join("")}
+      </div>`;
+    }
   }
 
   box.innerHTML = html;
@@ -3521,7 +3526,10 @@ function renderReportContent(rootEl, mask, days, chartsArr, colors) {
   }
 
   const exs = [...new Set(allWorkouts.map(w => w.exercise))];
-  const prs = exs.map(ex => ({ ex, pr: getPRFrom(allWorkouts, ex) })).filter(x => x.pr).sort((a, b) => b.pr.oneRM - a.pr.oneRM);
+  const prs = exs.map(ex => ({ ex, pr: getPRFrom(allWorkouts, ex) })).filter(x => x.pr).sort((a, b) => {
+    if (!!a.pr.isTime !== !!b.pr.isTime) return a.pr.isTime ? 1 : -1; // 時間種目(秒)は重量種目(kg)の後ろにまとめる
+    return b.pr.oneRM - a.pr.oneRM;
+  });
 
   const growths = exs.map(ex => {
     const records = allWorkouts.filter(w => w.exercise === ex && w.date >= cutoffStr).sort((a, b) => a.date.localeCompare(b.date));
@@ -3536,9 +3544,12 @@ function renderReportContent(rootEl, mask, days, chartsArr, colors) {
   const periodVolume = periodWorkouts.reduce((s, w) => s + totalVolume(w), 0);
 
   let strengthHTML = "";
-  if (bw && prs.length > 0) {
-    const top = prs.slice(0, 3).map(p => `${escapeHtml(p.ex)}: ${(p.pr.oneRM / bw).toFixed(2)}×体重`);
-    strengthHTML = `<div class="muted" style="margin-top:6px;font-size:12px">${top.join(" / ")}</div>`;
+  if (bw) {
+    const strengthPrs = prs.filter(p => !p.pr.isTime); // 体重比は重量種目のみ
+    if (strengthPrs.length > 0) {
+      const top = strengthPrs.slice(0, 3).map(p => `${escapeHtml(p.ex)}: ${(p.pr.oneRM / bw).toFixed(2)}×体重`);
+      strengthHTML = `<div class="muted" style="margin-top:6px;font-size:12px">${top.join(" / ")}</div>`;
+    }
   }
 
   const memos = mask.memo ? periodWorkouts.filter(w => w.memo).sort((a, b) => b.date.localeCompare(a.date)) : [];
@@ -3567,7 +3578,12 @@ function renderReportContent(rootEl, mask, days, chartsArr, colors) {
 
     <div class="card">
       <h2>🏆 自己ベスト</h2>
-      ${prs.length === 0 ? '<div class="muted">記録なし</div>' : prs.map(p => `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div class="exercise" style="font-size:14px">${escapeHtml(p.ex)}</div><div class="detail">${p.pr.weight}kg × ${p.pr.reps}回 <span class="muted" style="font-size:12px">(1RM ${p.pr.oneRM.toFixed(1)}kg / ${p.pr.date})</span></div></div>`).join("")}
+      ${prs.length === 0 ? '<div class="muted">記録なし</div>' : prs.map(p => {
+        const detail = p.pr.isTime
+          ? `合計 ${Math.round(p.pr.oneRM)}秒 <span class="muted" style="font-size:12px">(最長 ${p.pr.reps}秒 / ${p.pr.date})</span>`
+          : `${p.pr.weight}kg × ${p.pr.reps}回 <span class="muted" style="font-size:12px">(1RM ${p.pr.oneRM.toFixed(1)}kg / ${p.pr.date})</span>`;
+        return `<div class="record-item" style="background:var(--surface-2);margin-bottom:6px"><div class="exercise" style="font-size:14px">${escapeHtml(p.ex)}</div><div class="detail">${detail}</div></div>`;
+      }).join("")}
     </div>
 
     <div class="card">
@@ -3630,6 +3646,7 @@ function renderReportContent(rootEl, mask, days, chartsArr, colors) {
     exContainer.innerHTML = '<div class="muted">データがありません</div>';
   } else {
     topEx.forEach((ex) => {
+      const exIsTime = isTimeExercise(ex);
       const div = document.createElement("div");
       div.style.marginBottom = "16px";
       const h3 = document.createElement("h3");
@@ -3645,7 +3662,7 @@ function renderReportContent(rootEl, mask, days, chartsArr, colors) {
           type: "line",
           data: {
             labels: records.map(r => r.date),
-            datasets: [{ label: "推定1RM(kg)", data: records.map(r => getBest1RM(r)), borderColor: cc.primary, backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
+            datasets: [{ label: exIsTime ? "合計時間(秒)" : "推定1RM(kg)", data: records.map(r => exIsTime ? getTotalReps(r) : getBest1RM(r)), borderColor: cc.primary, backgroundColor: "transparent", tension: 0.25, pointRadius: 3 }]
           },
           options: chartBaseOptions(cc)
         }));
